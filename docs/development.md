@@ -19,8 +19,10 @@ python3 tools/deploy.py --host <tv-ip>   # build, copy over SSH and run install.
 ```
 
 `deploy.py` needs key-based root SSH to the TV; `--identity <key>` picks the
-key, `--keep-lg-home` and `--uninstall` do what they say. The archive holds
-both variants; on the TV `install.sh` picks the one for its webOS.
+key, `--keep-lg-home` and `--uninstall` do what they say, and anything after
+`--` goes to `install.sh` on the TV (`-- --probe` only says which variant
+fits; `-- --overlay --replace-lg-home` forces one). The archive holds both
+variants; on the TV `install.sh` picks the one the TV has the makings for.
 
 ## Configuration
 

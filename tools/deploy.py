@@ -2,8 +2,11 @@
 """Build a release and install it on a rooted TV over SSH, from a computer.
 
 Usage: tools/deploy.py --host <tv-ip> [--config file.json] [--keep-lg-home] [--uninstall]
+                       [-- <install.sh options>]
 Needs key-based root SSH to the TV (the Homebrew Channel's SSH server).
-The TV runs the same install.sh a user would run by hand.
+The TV runs the same install.sh a user would run by hand; anything after
+"--" goes to it, e.g. "-- --probe" only says which variant fits the TV and
+"-- --overlay --replace-lg-home" forces the overlay with the stand-in.
 """
 import argparse
 import shlex
@@ -21,7 +24,10 @@ def main():
     parser.add_argument("--keep-lg-home", action="store_true", help="webOS 10: leave LG's Home in place")
     parser.add_argument("--uninstall", action="store_true", help="remove Homebar from the TV")
     parser.add_argument("--identity", help="SSH private key (default: ssh's own choice)")
+    parser.add_argument("install_options", nargs=argparse.REMAINDER, metavar="-- OPTION",
+                        help="passed on to install.sh after --, e.g. -- --probe, -- --overlay --replace-lg-home")
     args = parser.parse_args()
+    install_options = [o for o in args.install_options if o != "--"]
 
     ssh = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
     if args.identity:
@@ -39,7 +45,7 @@ def main():
     print("built " + archive.name)
     remote = "/tmp/" + archive.name
     subprocess.run(ssh + [target, "cat > " + remote], input=archive.read_bytes(), check=True)
-    options = " --keep-lg-home" if args.keep_lg_home else ""
+    options = "".join(" " + shlex.quote(o) for o in (["--keep-lg-home"] if args.keep_lg_home else []) + install_options)
     script = "cd /tmp && rm -rf {n} && tar xzf {a} && sh {n}/install.sh{o}; r=$?; rm -rf {n} {a}; exit $r".format(
         n=shlex.quote(name), a=shlex.quote(remote), o=options)
     sys.exit(subprocess.run(ssh + ["-tt", target, script]).returncode)
