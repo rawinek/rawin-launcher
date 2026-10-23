@@ -19,10 +19,12 @@ python3 tools/deploy.py --host <tv-ip>   # build, copy over SSH and run install.
 ```
 
 `deploy.py` needs key-based root SSH to the TV; `--identity <key>` picks the
-key, `--keep-lg-home` and `--uninstall` do what they say, and anything after
-`--` goes to `install.sh` on the TV (`-- --probe` only says which variant
-fits; `-- --overlay --replace-lg-home` forces one). The archive holds both
-variants; on the TV `install.sh` picks the one the TV has the makings for.
+key, `--keep-lg-home` and `--uninstall` do what they say, `--backup file`
+and `--restore file` copy the TV's `backup.json` either way, and anything
+after `--` goes to `install.sh` on the TV (`-- --probe` only says which
+variant fits; `-- --overlay --replace-lg-home` forces one). The archive
+holds both variants; on the TV `install.sh` picks the one the TV has the
+makings for.
 
 ## Configuration
 
@@ -58,9 +60,12 @@ The panel is drawn for 1920×1080 and scaled to the size it gets: `u` in
 element is placed in 1080p numbers (`shell.px(24)`) and follows the screen.
 Positions hang from the bottom and the right edge (`shell.height - px(…)`,
 `anchors.right`), never from the top left, so a wider screen gets more rail
-and more columns. `tools/render-panel.py` draws a set of scenes (Home with
-seven favourites and long HDMI-CEC names, a favourite focused, Apps, System,
-the settings, no favourites, two inputs) at a size:
+and more columns. Text goes through `pt()`, which also takes the text size
+setting. `tools/render-panel.py` draws a set of scenes (Home with seven
+favourites and long HDMI-CEC names, recent apps and Live TV, hidden inputs
+and apps, Apps in each order, System with an update waiting, the settings
+and a setting's values, the larger text size, no favourites, two inputs) at
+a size:
 
 ```sh
 python3 -m pip install PySide6

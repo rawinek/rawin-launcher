@@ -46,7 +46,14 @@ Installer options:
 | `--overlay` | The overlay app with the root helper, or fail |
 | `--keep-lg-home` | Overlay: leave LG's Home in place; *System → Original Home* opens it |
 | `--replace-lg-home` | Overlay on an untested webOS: put the black stand-in in LG Home's place anyway (on webOS 10 it always is) |
+| `--home-key=CODE` | Overlay: bind this key code as HOME (the number Input Hook logs for it) |
+| `--home-key=ask` | Overlay: ask for a press of HOME, also when a key is already bound |
 | `--try-webos10` | The same as `--overlay`; older instructions use it |
+
+On the overlay the installer, run from a terminal, asks for a press of HOME
+and binds the key Input Hook logs for it (15 s; without a press, the tested
+Magic Remote's `773`). An install that finds the launcher already bound to a
+key keeps that key; an update from the panel never asks.
 
 ### Without internet on the TV
 

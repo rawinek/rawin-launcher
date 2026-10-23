@@ -32,10 +32,13 @@ or `sh rawin-launcher/probe.sh` from the release).
 
 ## HOME does nothing (overlay)
 
-The installer binds key `773`, the HOME button of the tested Magic Remote as
-Input Hook reports it. On another remote, press HOME once and read its code
-from Input Hook's log (`/tmp/lginput-hook-*.log`), then change it in
-`keybinds.json`.
+Run from a terminal, the installer asks for a press of HOME and binds the
+key Input Hook logs for it; without a press, or from the panel's updater, it
+binds `773`, the HOME button of the tested Magic Remote. If HOME does
+nothing, run the installer again from a terminal with
+`sh install.sh --overlay --home-key=ask` and press HOME when asked, or read
+the code from Input Hook's log (`/tmp/lginput-hook-*.log`) after a press and
+give it with `--home-key=CODE`.
 
 ## An update fails
 

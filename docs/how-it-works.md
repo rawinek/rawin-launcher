@@ -32,16 +32,20 @@ LG's Home is a Flutter app that cannot be extended, so the launcher is its own
 app:
 
 - `org.rawin.launcher`: a developer QML app with an overlay window, run by
-  `qml-runner`. The *Input Hook* homebrew app sends the HOME button to it. BACK
-  hides the window but keeps the process, so the next HOME usually only has
-  to show it.
+  `qml-runner`. The *Input Hook* homebrew app sends the HOME button to it:
+  HOME shows the panel, or hides it when it is already up. BACK hides the
+  window but keeps the process, so the next HOME only has to show it. The
+  boot hook starts the app hidden once the helper is up (a launch with
+  `{"preload": true}`), so the first HOME after a boot is a show too, not a
+  start of `qml-runner`.
 - `org.rawin.launcher.service`: a Node service in the same package, given root
   with the Homebrew Channel's `elevate-service`. webOS 10 answers no Luna calls
   from a developer QML app, so the helper lists apps and inputs, launches apps
   and reads the TV language, and serves them to the panel over HTTP on
   `127.0.0.1:8899` (loopback only). It also watches the foreground: when an app
   exits or LG Home comes up uninvited it opens the last input (or the HDMI
-  chosen in the settings). It is written for node 8 and later.
+  chosen in the settings). It keeps the backup file (`backup.json`) for the
+  panel. It is written for node 8 and later.
 - LG Home stand-in: a black web page with the id `com.webos.app.home`,
   bind-mounted over `/usr/palm/applications/com.webos.app.home` at every boot.
   The app manager is made to re-read Home with a block and release of that one
@@ -69,6 +73,23 @@ again each time but only replace the old ones when they changed, so the tiles
 are not torn down and built again; the glow in the corner is drawn only where
 it reaches; the *Apps* grid builds only the rows on screen and the next one.
 
+The glow colour of an app the build has no colour for is read from its icon:
+the icon is drawn 24 pixels wide on a hidden canvas and its vivid pixels
+averaged (grey, white and black count for little; a dark result is
+brightened), once per icon, and kept with the icon's path so a changed icon
+is read again.
+
+## What the launcher keeps
+
+Everything the launcher remembers is in its LocalStorage database
+(`rawinLauncher`): `favourites` (app ids), `settings`, `hidden` and
+`hiddenInputs` (ids hidden with RED), `usage` (how often each app was opened
+from here, for the "most used" order), `recent` (the last ten opened) and
+`colors` (the glow colours read from icons). *Back up* writes the first six
+to `backup.json` next to the installed launcher: with the Home panel through
+the Homebrew Channel's `exec` (the JSON in a `printf`), with the overlay
+through the helper (`POST /backup`, `GET /restore`).
+
 ## What it changes on the TV
 
 Nothing on the read-only system partition is written. Everything below is
@@ -78,7 +99,7 @@ Home panel:
 
 | What | Where |
 | :--- | :--- |
-| Launcher files, patched and original Home QML, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`) | `/var/lib/webosbrew/rawin-launcher/` |
+| Launcher files, patched and original Home QML, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`), `backup.json` once made | `/var/lib/webosbrew/rawin-launcher/` |
 | Boot hook (bind mounts, CRIU snapshot hidden, Home restarted) | `/var/lib/webosbrew/init.d/76-rawin-launcher` |
 | Favourites and settings | LG Home's LocalStorage (database `rawinLauncher`) |
 
@@ -88,14 +109,15 @@ Overlay:
 | :--- | :--- |
 | App and helper (developer app) | `org.rawin.launcher`, `org.rawin.launcher.service` |
 | Helper runs as root | Homebrew `elevate-service` role files for the service |
-| LG Home stand-in, its script, the uninstaller, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`) | `/var/lib/webosbrew/rawin-launcher-home/` |
+| LG Home stand-in, its script, the uninstaller, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`), `backup.json` once made | `/var/lib/webosbrew/rawin-launcher-home/` |
 | Boot hook (stand-in mounted, helper started) | `/var/lib/webosbrew/init.d/77-rawin-launcher` |
-| HOME button → launcher | Input Hook `keybinds.json`, key `773` (first copy kept as `keybinds.json.before-rawin-launcher`) |
+| HOME button → launcher | Input Hook `keybinds.json`: the key pressed when the installer asked, else `773` (first copy kept as `keybinds.json.before-rawin-launcher`) |
 | Last input, BACK-hold target | `/var/lib/webosbrew/rawin-launcher-last-input`, `rawin-launcher-settings.json` |
 | Favourites and settings | the app's LocalStorage (database `rawinLauncher`) |
 
 `773` is the HOME button of the tested Magic Remote as Input Hook reports it;
-for another remote see
+run from a terminal, the installer asks for a press of HOME and takes the
+code Input Hook logs for it, see
 [Troubleshooting](troubleshooting.md#home-does-nothing-overlay).
 
 ## Names

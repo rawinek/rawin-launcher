@@ -10,11 +10,15 @@ name), all installed apps, and a System page. The picture stays visible above
 it.
 
 - **Favourites are chosen on the TV**: hold OK on an app in *Apps* to add it,
-  hold OK on a favourite to move or remove it.
+  hold OK on a favourite to move or remove it. Recent apps can sit before
+  them.
+- **RED hides** an app or an input you never use; nothing is uninstalled.
 - **Launcher settings**: nine [languages](docs/using.md#languages),
-  [eleven colour themes](docs/themes.md), the clock bar, the app name, and
-  **updates** straight from this repository's releases.
-- LG's promotional apps are hidden from the lists; nothing is uninstalled.
+  [eleven colour themes](docs/themes.md), the text size, the Apps order,
+  Live TV on the row, the clock bar, the app name, a **backup** of it all,
+  and **updates** straight from this repository's releases, with a dot on
+  *System* when one is there.
+- LG's promotional apps are hidden from the lists.
 - **Any screen**: the panel scales to the TV's UI, HD (1280×720) as well as
   FHD and UHD, and shows the inputs the TV has, two or four, with the
   device on each.
