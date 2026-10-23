@@ -16,7 +16,9 @@
 // was never tested gets the panel with what fits instead of nothing.
 //
 // Usage: node patch-home.js [--check] <dir>
-//   reads <dir>/main.original.qml and <dir>/UIController.original.qml and
+//   reads <dir>/main.original.qml and <dir>/UIController.original.qml (and,
+//   when there, <dir>/SystemProperties.original.qml, Home's
+//   AppInitializer/SystemProperties.qml, which is only read) and
 //   writes <dir>/main.qml and <dir>/UIController.qml; with --check it only
 //   says whether the panel fits (exit 0) or not (exit 1) and writes nothing.
 // Plain ES5 for old node versions (webOS 3 and 4 have node 0.12).
@@ -119,10 +121,15 @@ if (main.indexOf('cleanHomeLoader') >= 0) {
   process.exit(1);
 }
 // What the panel reads from LG's Home: whether Home is in front, and the
-// window interface that closes it.
-['systemProperties.isAppForeground', 'interfaces.application'].forEach(function (name) {
-  if (main.indexOf(name) < 0) refuse('no ' + name);
-});
+// window interface that closes it. Home in front is systemProperties.isAppForeground:
+// main.qml holds the systemProperties object, and isAppForeground is declared
+// in SystemProperties.qml (main.qml itself need not use it; 4.10's does not).
+var sysPath = path.join(dir, 'SystemProperties.original.qml');
+var sysProps = fs.existsSync(sysPath) ? fs.readFileSync(sysPath, 'utf8') : '';
+if (!/\bsystemProperties\b/.test(main)) refuse('no systemProperties');
+if (!/^[ \t]*property[ \t]+\w+[ \t]+isAppForeground\b/m.test(sysProps) && main.indexOf('systemProperties.isAppForeground') < 0)
+  refuse('no systemProperties.isAppForeground');
+if (main.indexOf('interfaces.application') < 0) refuse('no interfaces.application');
 // The root element and its id (rootWindow on the tested firmware).
 var rootAt = /^[A-Z]\w*\s*\{/m.exec(main);
 if (!rootAt) refuse('no root element');

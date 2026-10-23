@@ -64,6 +64,8 @@ panel_fits() {
         cp "$HOME_QML/main.qml" "$tmp/main.original.qml"
         cp "$HOME_QML/Controllers/UIController.qml" "$tmp/UIController.original.qml"
     fi
+    # Where Home declares isAppForeground; never mounted over, only read.
+    [ -f "$HOME_QML/AppInitializer/SystemProperties.qml" ] && cp "$HOME_QML/AppInitializer/SystemProperties.qml" "$tmp/SystemProperties.original.qml"
     panel_why=$(node "$HERE/webos4/patch-home.js" --check "$tmp" 2>&1)
     r=$?
     rm -rf "$tmp"

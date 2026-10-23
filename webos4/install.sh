@@ -30,6 +30,8 @@ else
     cp "$MAIN" "$TMP/main.original.qml"
     cp "$CTRL" "$TMP/UIController.original.qml"
 fi
+# Where Home declares isAppForeground; never mounted over, only read.
+[ -f "$ROOT/AppInitializer/SystemProperties.qml" ] && cp "$ROOT/AppInitializer/SystemProperties.qml" "$TMP/SystemProperties.original.qml"
 node "$HERE/patch-home.js" "$TMP" || fail "LG Home was not changed (the overlay may fit instead: sh install.sh --overlay)"
 
 say "installing to $BASE"
