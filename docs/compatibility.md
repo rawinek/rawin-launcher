@@ -75,10 +75,10 @@ pills, one with DisplayPort or USB-C shows those too.
 
 ## Tested TVs
 
-| TV | webOS | Firmware | Variant |
-| :--- | :--- | :--- | :--- |
-| LG OLED55C9PLA (C9, 2019) | 4.10.2 | 05.50.00 | Home panel |
-| LG OLED77B46LA (B4, 2024) | 10.3.1 | 33.31.68 | Overlay |
+| TV | webOS | Firmware | Variant | Last tested with |
+| :--- | :--- | :--- | :--- | :--- |
+| LG OLED55C9PLA (C9, 2019) | 4.10.2 | 05.50.00 | Home panel | 0.14.0 |
+| LG OLED77B46LA (B4, 2024) | 10.3.1 | 33.31.68 | Overlay | 0.14.0 |
 
 ## Trying an untested webOS
 

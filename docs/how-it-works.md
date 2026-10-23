@@ -57,7 +57,9 @@ app:
   `127.0.0.1:8899` (loopback only). It also watches the foreground: when an app
   exits or LG Home comes up uninvited it opens the last input (or the HDMI
   chosen in the settings). It keeps the backup file (`backup.json`) for the
-  panel. It is written for node 8 and later.
+  panel. It is written for node 8 and later. When it does not answer (a
+  HOME in the second before it is up after a boot, an update replacing it),
+  the panel asks for the app list again every 1.5 s, up to ten times.
 - LG Home stand-in: a black web page with the id `com.webos.app.home`,
   bind-mounted over `/usr/palm/applications/com.webos.app.home` at every boot.
   The app manager is made to re-read Home with a block and release of that one

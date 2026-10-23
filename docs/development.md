@@ -1,6 +1,7 @@
 # Development
 
 - [Build from source](#build-from-source)
+- [Another webOS version, on purpose](#another-webos-version-on-purpose)
 - [Configuration](#configuration)
 - [Layout](#layout)
 - [Checking the layout](#checking-the-layout)
@@ -25,6 +26,14 @@ after `--` goes to `install.sh` on the TV (`-- --probe` only says which
 variant fits; `-- --overlay --replace-lg-home` forces one). The archive
 holds both variants; on the TV `install.sh` picks the one the TV has the
 makings for.
+
+## Another webOS version, on purpose
+
+`HOMEBAR_WEBOS=<version>` makes `install.sh` and `probe.sh` take the TV for
+that webOS version (`HOMEBAR_WEBOS=9.1 sh install.sh --probe` shows what the
+installer would do on a webOS 9 TV with this TV's makings). The variant is
+still chosen by what the TV has; the version only decides what counts as
+tested and whether the overlay replaces LG's Home by default.
 
 ## Configuration
 

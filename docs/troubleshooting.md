@@ -51,9 +51,9 @@ reaches the panel a few seconds after the hooks begin: on the tested B4
 the TV shows its input from about 20 s, the hooks begin at 35 to 37 s and
 the first HOME that reached the panel came at 42 s. A HOME before that
 opens LG's Home once; it is stopped when the stand-in takes its place a
-moment later, and the TV goes back to the input. A TV woken from standby does not boot, so this is only seen after a
-power cut, a `reboot` or a firmware update. The boot log in `diagnose.sh`
-shows when each step ran.
+moment later, and the TV goes back to the input. A TV woken from standby
+does not boot, so this is only seen after a power cut, a `reboot` or a
+firmware update. The boot log in `diagnose.sh` shows when each step ran.
 
 ## An update fails
 

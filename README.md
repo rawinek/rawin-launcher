@@ -14,16 +14,17 @@ it.
 - **RED hides** an app or an input you never use; nothing is uninstalled.
 - **Launcher settings**, a menu over the picture: nine
   [languages](docs/using.md#languages), [eight colour themes](docs/themes.md),
-  the text size, the Apps order, Live TV on the row, the clock bar, the app
-  name, a **backup** of it all, and **updates** straight from this
-  repository's releases, with a dot on *System* when one is there.
+  the text size, the Apps order, Live TV on the row, the clock bar and its
+  format, the app name, a **backup** of it all, and **updates** straight
+  from this repository's releases, with a dot on *System* when one is there.
 - LG's promotional apps are hidden from the lists.
 - **Any screen**: the panel scales to the TV's UI, HD (1280×720) as well as
   FHD and UHD, and shows the inputs the TV has, two or four, with the
   device on each.
-- **webOS 10:** LG's own Home never appears. A black stand-in takes its place,
-  and the TV goes back to the last input (or a chosen HDMI) when an app exits
-  or BACK is held.
+- **webOS 10:** LG's own Home stays out of the way. A black stand-in takes
+  its place, and the TV goes back to the last input (or a chosen HDMI) when
+  an app exits or BACK is held. Only a HOME in the first 40 s after a cold
+  boot, before the Homebrew Channel's hooks run, opens LG's Home once.
 
 <img src="docs/screenshots/demo.gif" width="100%" alt="Demo: HOME opens the launcher, System, Launcher settings: languages, clock bar, app name">
 
