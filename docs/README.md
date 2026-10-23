@@ -14,5 +14,7 @@
   right after a boot, failed updates, an untested webOS, getting LG's Home back
 - [Development](development.md): building, configuration, adding a language
   or a theme
+- [Experiments](experiments.md): things tried on the test TVs that are not
+  part of the release
 
 Back to the [project page](../README.md).
