@@ -5,6 +5,8 @@
 #   --keep-lg-home     leave LG's Home in place (no black stand-in); without the
 #                      stand-in LG Home may show briefly when an app exits
 #   --replace-lg-home  the stand-in in LG Home's place (the default here)
+#   --home-key=CODE    bind this key code as HOME (Input Hook's number for it)
+#   --home-key=ask     ask for a press of HOME, also when a key is already bound
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 UI=$HERE/../ui
@@ -18,10 +20,12 @@ KEYS=/home/root/.config/lginputhook/keybinds.json
 HOME_KEY=773   # the remote's HOME button as Input Hook reports it
 
 KEEP_LG_HOME=
+HOME_KEY_OPT=
 for a in "$@"; do
     case "$a" in
         --keep-lg-home) KEEP_LG_HOME=1 ;;
         --replace-lg-home) KEEP_LG_HOME= ;;
+        --home-key=*) HOME_KEY_OPT=${a#--home-key=} ;;
         *) echo "unknown option: $a" >&2; exit 2 ;;
     esac
 done
@@ -86,8 +90,36 @@ say "HOME button -> rawin-launcher (Input Hook)"
 mkdir -p "$(dirname "$KEYS")"
 [ -f "$KEYS" ] || echo '{}' > "$KEYS"
 [ -f "$KEYS.before-rawin-launcher" ] || cp -p "$KEYS" "$KEYS.before-rawin-launcher"
+# The HOME button's code: the one given (--home-key=CODE), else the one
+# already bound to the launcher (an earlier install, an update from the
+# panel), else the one pressed now, when someone is at a terminal (or
+# --home-key=ask), else 773, the tested Magic Remote's. Input Hook logs each
+# key it sees; the first code logged after the prompt is taken.
+bound=$(node -e '
+var k = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+Object.keys(k).forEach(function (code) { if (k[code] && k[code].id === "org.rawin.launcher") console.log(code); });' "$KEYS" 2>/dev/null | head -n 1)
+case "$HOME_KEY_OPT" in
+    ask) bound= ;;
+    "") ;;
+    *) bound=$HOME_KEY_OPT ;;
+esac
+if [ -n "$bound" ]; then
+    HOME_KEY=$bound
+    say "HOME is key $HOME_KEY"
+elif [ -t 0 ] && log=$(ls -t /tmp/lginput-hook-*.log 2>/dev/null | head -n 1) && [ -n "$log" ]; then
+    before=$(wc -l <"$log")
+    say "press HOME on the remote now to bind it (15 s; otherwise key $HOME_KEY, the tested Magic Remote's, is used)"
+    n=0
+    while [ $n -lt 15 ]; do
+        sleep 1; n=$((n + 1))
+        code=$(tail -n +$((before + 1)) "$log" | grep -v 'Keybinds reloaded' | grep -o -E '[0-9]{3,4}' | head -n 1)
+        [ -n "$code" ] && { HOME_KEY=$code; break; }
+    done
+    say "HOME is key $HOME_KEY"
+fi
 node -e '
 var fs = require("fs"), f = process.argv[1], k = JSON.parse(fs.readFileSync(f, "utf8"));
+Object.keys(k).forEach(function (code) { if (k[code] && k[code].id === "org.rawin.launcher") delete k[code]; });
 k[process.argv[2]] = {action: "launch", id: "org.rawin.launcher"};
 fs.writeFileSync(f, JSON.stringify(k));' "$KEYS" "$HOME_KEY"
 
