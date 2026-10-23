@@ -68,7 +68,9 @@ cp "$UI/icon.png" "$BASE/app/icon.png"
 cp "$HERE/home-takeover.sh" "$BASE/takeover.sh"
 cp "$HERE/uninstall.sh" "$BASE/uninstall.sh"
 cp "$HERE/../update.sh" "$HERE/../diagnose.sh" "$HERE/../VERSION" "$BASE/"
-chmod 755 "$BASE/takeover.sh" "$BASE/uninstall.sh" "$BASE/update.sh"
+# The probe (which variant fits) next to diagnose.sh, with the patch it checks with.
+cp "$HERE/../probe.sh" "$HERE/../webos4/patch-home.js" "$BASE/"
+chmod 755 "$BASE/takeover.sh" "$BASE/uninstall.sh" "$BASE/update.sh" "$BASE/probe.sh"
 if [ -n "$KEEP_LG_HOME" ]; then
     touch "$BASE/keep-lg-home"
     sh "$BASE/takeover.sh" restore >/dev/null 2>&1 || true

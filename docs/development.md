@@ -47,7 +47,8 @@ variants; on the TV `install.sh` picks the one the TV has the makings for.
 For the overlay, `tools/build.py` turns `ui/Launcher.qml` into the app's
 `Panel.qml`, swapping its Luna Service elements for
 `webos10/panel-bridge.qml` (HTTP to the helper). The top-level `install.sh`
-picks the variant by what the TV has, see
+picks the variant by what the TV has (`probe.sh`, which the installers also
+put next to `diagnose.sh` on the TV), see
 [Compatibility](compatibility.md#which-variant-a-tv-gets).
 
 ## Checking the layout

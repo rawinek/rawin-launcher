@@ -78,7 +78,7 @@ Home panel:
 
 | What | Where |
 | :--- | :--- |
-| Launcher files, patched and original Home QML | `/var/lib/webosbrew/rawin-launcher/` |
+| Launcher files, patched and original Home QML, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`) | `/var/lib/webosbrew/rawin-launcher/` |
 | Boot hook (bind mounts, CRIU snapshot hidden, Home restarted) | `/var/lib/webosbrew/init.d/76-rawin-launcher` |
 | Favourites and settings | LG Home's LocalStorage (database `rawinLauncher`) |
 
@@ -88,7 +88,7 @@ Overlay:
 | :--- | :--- |
 | App and helper (developer app) | `org.rawin.launcher`, `org.rawin.launcher.service` |
 | Helper runs as root | Homebrew `elevate-service` role files for the service |
-| LG Home stand-in, its script, the uninstaller | `/var/lib/webosbrew/rawin-launcher-home/` |
+| LG Home stand-in, its script, the uninstaller, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`) | `/var/lib/webosbrew/rawin-launcher-home/` |
 | Boot hook (stand-in mounted, helper started) | `/var/lib/webosbrew/init.d/77-rawin-launcher` |
 | HOME button → launcher | Input Hook `keybinds.json`, key `773` (first copy kept as `keybinds.json.before-rawin-launcher`) |
 | Last input, BACK-hold target | `/var/lib/webosbrew/rawin-launcher-last-input`, `rawin-launcher-settings.json` |

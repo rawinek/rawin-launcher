@@ -17,14 +17,18 @@ ways. The installer picks by what the TV has, not by its version number:
 | **Overlay** | Otherwise, with the Homebrew Channel, the *Input Hook* app and node 8 or newer | A separate overlay app plus a root helper; Input Hook sends HOME to it |
 
 `sh install.sh --probe` says which one fits and why, and changes nothing;
-`--home-panel` and `--overlay` force one. `diagnose.sh` from the unpacked
-release runs the probe too.
+`--home-panel` and `--overlay` force one. The same check is `probe.sh`,
+next to `install.sh` in the release and next to `diagnose.sh` once
+installed; `diagnose.sh` runs it.
 
 The Home panel's patch is made of pieces. The ones the panel cannot do
 without must match (the root element, LG's UI controller, Home's foreground
-state); the rest (focus coming back, the BLUE key, LG's hidden mode, voice)
-go in where they match and are reported where they do not, so a Home that
-differs a little still gets the panel.
+state, `isAppForeground`, declared in Home's `SystemProperties.qml`); the
+rest (focus coming back, the BLUE key, LG's hidden mode, voice) go in where
+they match and are reported where they do not, so a Home that differs a
+little still gets the panel. "QML app" here means a Home whose UI is QML
+under `/usr/palm/applications/com.webos.app.home/qml/`; the app manager
+reports webOS 4's as `native`, a program that loads that QML.
 
 ## webOS versions
 

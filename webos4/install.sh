@@ -48,7 +48,9 @@ cp "$UI"/fonts/* "$BASE/current/fonts/"
 webos=$(sed -n 's/.*release \([0-9][0-9.]*\).*/\1/p' /etc/starfish-release 2>/dev/null | head -n 1)
 sed -i "s/^var webos = .*/var webos = \"$webos\";/" "$BASE/current/Config.js"
 cp "$HERE/apply.sh" "$HERE/uninstall.sh" "$HERE/../update.sh" "$HERE/../diagnose.sh" "$HERE/../VERSION" "$BASE/"
-chmod 755 "$BASE/apply.sh" "$BASE/uninstall.sh" "$BASE/update.sh"
+# The probe (which variant fits) next to diagnose.sh, with the patch it checks with.
+cp "$HERE/../probe.sh" "$HERE/patch-home.js" "$BASE/"
+chmod 755 "$BASE/apply.sh" "$BASE/uninstall.sh" "$BASE/update.sh" "$BASE/probe.sh"
 mkdir -p /var/lib/webosbrew/init.d
 ln -sf "$BASE/apply.sh" "$HOOK"
 sh "$BASE/apply.sh"

@@ -2,18 +2,25 @@
 # rawin-launcher diagnostics. Run on the TV as root: sh diagnose.sh
 # Collects what is needed to look into a problem into one text file,
 # /tmp/rawin-launcher-diagnose.txt, to attach to a GitHub issue. It holds the
-# TV model, webOS and firmware versions, what is installed and what the launcher
-# sees (apps, HDMI inputs and the device names on them), and the launcher's
-# lines from the system log; no IP addresses, serial numbers or accounts.
+# TV model, webOS and firmware versions, which variant fits (probe.sh next to
+# this script), what is installed and what the launcher sees (apps, HDMI
+# inputs and the device names on them), and the launcher's lines from the
+# system log; no IP addresses, serial numbers or accounts.
 OUT=/tmp/rawin-launcher-diagnose.txt
 HELPER=http://127.0.0.1:8899
 APPS=/media/developer/apps/usr/palm/applications
+HERE=$(cd "$(dirname "$0")" && pwd)
+PANEL_BASE=/var/lib/webosbrew/rawin-launcher
+OVERLAY_BASE=/var/lib/webosbrew/rawin-launcher-home
+HOME_QML=/usr/palm/applications/com.webos.app.home/qml
 
 section() { printf '\n== %s\n' "$1"; }
 show() { [ -f "$1" ] && cat "$1" || echo "(no $1)"; }
 luna() { luna-send -n 1 "$1" "$2" </dev/null 2>&1; echo; }
 helper() { wget -q -T 10 -O - "$HELPER$1" 2>&1 || echo "(no answer from the helper)"; echo; }
 version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || echo "not installed"; }
+# Prints the output of a command, or a note when there is none.
+or_note() { out=$("$@" 2>/dev/null); if [ -n "$out" ]; then echo "$out"; else echo "$NOTE"; fi; }
 
 {
     echo "rawin-launcher diagnostics, $(date -u '+%Y-%m-%d %H:%M UTC')"
@@ -28,15 +35,14 @@ version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || ec
     echo "Homebrew Channel: $(version_of $APPS/org.webosbrew.hbchannel)"
     echo "Input Hook: $(version_of $APPS/org.webosbrew.inputhook)"
 
-    # Which variant fits this TV, from the release's installer (not installed
-    # with the launcher; present when run from the unpacked release).
-    section "Variants (install.sh --probe)"
-    HERE=$(cd "$(dirname "$0")" && pwd)
-    if [ -f "$HERE/install.sh" ] && [ -f "$HERE/webos4/patch-home.js" ]; then sh "$HERE/install.sh" --probe 2>&1
-    else echo "(run from the unpacked release for this)"; fi
+    # Which variant fits this TV: probe.sh is in the release next to install.sh
+    # and installed next to this script, with patch-home.js.
+    section "Variants (probe.sh)"
+    if [ -f "$HERE/probe.sh" ]; then sh "$HERE/probe.sh" 2>&1
+    else echo "(no probe.sh next to this script; a release from 0.13.0 on has it)"; fi
 
     section "rawin-launcher"
-    for d in /var/lib/webosbrew/rawin-launcher /var/lib/webosbrew/rawin-launcher-home; do
+    for d in "$PANEL_BASE" "$OVERLAY_BASE"; do
         [ -d "$d" ] && { echo "$d: version $(cat "$d/VERSION" 2>/dev/null || echo '?')"; ls "$d"; }
     done
     echo "overlay app: $(version_of $APPS/org.rawin.launcher)"
@@ -44,17 +50,30 @@ version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || ec
 
     section "LG Home"
     luna luna://com.webos.applicationManager/getAppInfo '{"id":"com.webos.app.home"}' | grep -o -E '"(type|version|main)": *"[^"]*"'
-    echo "Home QML: $(ls /usr/palm/applications/com.webos.app.home/qml/main.qml 2>/dev/null || echo none)"
-    [ -f /var/lib/webosbrew/rawin-launcher-home/takeover.sh ] && sh /var/lib/webosbrew/rawin-launcher-home/takeover.sh status
+    echo "Home QML: $(ls $HOME_QML/main.qml 2>/dev/null || echo none)"
+    # The Home panel: LG reads our patched copies only while they are mounted
+    # over the firmware files.
+    if [ -f "$PANEL_BASE/main.qml" ]; then
+        if cmp -s "$PANEL_BASE/main.qml" "$HOME_QML/main.qml" && cmp -s "$PANEL_BASE/UIController.qml" "$HOME_QML/Controllers/UIController.qml"; then
+            echo "patched Home QML in place: yes"
+        else
+            echo "patched Home QML in place: no (the boot hook did not mount it, or LG Home changed)"
+        fi
+    fi
+    [ -f "$OVERLAY_BASE/takeover.sh" ] && sh "$OVERLAY_BASE/takeover.sh" status
     grep -F com.webos.app.home /proc/mounts
 
-    section "Helper (webOS 10 variant)"
-    helper /ping
-    helper /home
-    helper /state
-    echo "apps listed: $(wget -q -T 20 -O - "$HELPER/apps" 2>/dev/null | grep -o '"id":' | wc -l)"
-    helper /foreground
-    helper /inputs
+    section "Helper (overlay)"
+    if [ -d "$OVERLAY_BASE" ] || [ -d "$APPS/org.rawin.launcher" ]; then
+        helper /ping
+        helper /home
+        helper /state
+        echo "apps listed: $(wget -q -T 20 -O - "$HELPER/apps" 2>/dev/null | grep -o '"id":' | wc -l)"
+        helper /foreground
+        helper /inputs
+    else
+        echo "(Home panel: no helper; the panel talks to the TV from inside LG Home)"
+    fi
 
     section "HOME button (Input Hook)"
     show /home/root/.config/lginputhook/keybinds.json
@@ -68,12 +87,13 @@ version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || ec
     show /tmp/rawin-launcher-update/state
 
     section "Processes"
-    ps -ef 2>/dev/null | grep -E 'rawin|qml-runner' | grep -v -E 'grep|diagnose'
+    NOTE="(none of the launcher's own; the Home panel runs inside LG Home's process)"
+    or_note sh -c "ps -ef 2>/dev/null | grep -E 'rawin|qml-runner' | grep -v -E 'grep|diagnose'"
 
     # The launcher's own messages and errors, not the list of launched apps.
     section "System log (rawin-launcher lines)"
-    cat /var/log/messages* 2>/dev/null | grep -i -E 'rawin' |
-        grep -v -E 'NL_(VSC|SOUND|APP_LAUNCH_BEGIN|APP_INSTALLED)' | tail -n 40
+    NOTE="(none in /var/log/messages)"
+    or_note sh -c "cat /var/log/messages* 2>/dev/null | grep -i -E 'rawin' | grep -v -E 'NL_(VSC|SOUND|APP_LAUNCH_BEGIN|APP_INSTALLED)' | tail -n 40"
 } >"$OUT" 2>&1
 
 echo "rawin-launcher: diagnostics written to $OUT"

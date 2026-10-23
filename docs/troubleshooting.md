@@ -13,17 +13,22 @@
 ```sh
 sh /var/lib/webosbrew/rawin-launcher/diagnose.sh        # Home panel
 sh /var/lib/webosbrew/rawin-launcher-home/diagnose.sh   # overlay
-sh rawin-launcher/diagnose.sh                           # from the unpacked release (also runs install.sh --probe)
+sh rawin-launcher/diagnose.sh                           # from the unpacked release
 ```
 
 It writes `/tmp/rawin-launcher-diagnose.txt`: the TV model, webOS and firmware
-versions, whether the screen is UHD, what is installed, which variant fits
-(from the release), what the launcher sees (apps, inputs with their device
-names, the app on screen), the HOME button binding and the launcher's lines
-from the logs. No IP addresses, serial numbers or accounts. Copy it to a
-computer with
+versions, whether the screen is UHD, which variant fits (`probe.sh`, next to
+`diagnose.sh` in the release and in the installed copy), what is installed
+and whether the patched Home QML is in place, what the launcher sees (apps,
+inputs with their device names, the app on screen), the HOME button binding
+and the launcher's lines from the logs. No IP addresses, serial numbers or
+accounts. Copy it to a computer with
 `ssh root@<tv-ip> cat /tmp/rawin-launcher-diagnose.txt > diagnose.txt`
 and attach it to an [issue](https://github.com/rawinek/webos-homebar/issues).
+
+`probe.sh` on its own says which variant fits and why, and changes nothing:
+`sh /var/lib/webosbrew/rawin-launcher/probe.sh` (or `…/rawin-launcher-home/probe.sh`,
+or `sh rawin-launcher/probe.sh` from the release).
 
 ## HOME does nothing (overlay)
 
@@ -41,9 +46,10 @@ works for any version.
 
 ## An untested webOS
 
-`sh install.sh --probe` says which variant fits the TV and why, before
-anything is changed; `--home-panel` and `--overlay` force one. What can
-happen on a webOS that was never tested:
+`sh install.sh --probe` (or `probe.sh`, see [Diagnose](#diagnose)) says
+which variant fits the TV and why, before anything is changed;
+`--home-panel` and `--overlay` force one. What can happen on a webOS that
+was never tested:
 
 - **The installer finds no variant.** It says what is missing for each: a
   Home that is not a QML app, or whose files differ too much for the patch;

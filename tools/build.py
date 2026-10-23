@@ -131,6 +131,7 @@ def release_files(spec, version):
     exe = 0o755
     files = [
         ("install.sh", (ROOT / "install.sh").read_bytes(), exe),
+        ("probe.sh", (ROOT / "probe.sh").read_bytes(), exe),
         ("uninstall.sh", (ROOT / "uninstall.sh").read_bytes(), exe),
         ("update.sh", (ROOT / "update.sh").read_bytes(), exe),
         ("diagnose.sh", (ROOT / "diagnose.sh").read_bytes(), exe),
