@@ -31,12 +31,15 @@ FocusScope {
     property string notice: ""
     property bool okHeld: false
     property bool longFired: false
+    // The TV's inputs, as many as it has (two on small sets, four on most):
+    // the Home rail, the navigation and the BACK-hold target all follow this list.
     property var inputs: Config.inputs
+    readonly property int inputCount: inputs.length
     property string clock: ""
     property string nowTitle: ""
     // Launcher settings, saved with the favourites (key "settings").
-    // lang: "system" or a code from Strings.languages; exitTo (webOS 10 only,
-    // sent to the helper): "last" or an HDMI input app id; clock: the top bar;
+    // lang: "system" or a code from Strings.languages; exitTo (overlay variant
+    // only, sent to the helper): "last" or an input app id; clock: the top bar;
     // title: the big name of the focused app on Home and Apps.
     // beta: updates also offer test builds (GitHub pre-releases).
     // theme: an id from Themes.ids.
@@ -47,11 +50,11 @@ FocusScope {
     // version found, failed the text key of the failed step.
     property var updateInfo: ({state: "idle", latest: "", failed: ""})
     readonly property string lang: settings.lang && settings.lang !== "system" ? settings.lang : (Strings.supported(systemLang) || "en")
-    // LG's own Home can be opened: always on webOS 4 (the panel lives in it); on
-    // webOS 10 only when it was kept (the helper says so, see panel-bridge.qml).
+    // LG's own Home can be opened: always with the panel inside it; from the
+    // overlay only when it was kept (the helper says so, see panel-bridge.qml).
     property bool stockHomeAvailable: Config.stockHome !== false
     readonly property var tools: toolsFor(lang, applications, stockHomeAvailable)
-    readonly property var settingsItems: settingsFor(lang, settings, systemLang, updateInfo)
+    readonly property var settingsItems: settingsFor(lang, settings, systemLang, updateInfo, inputs)
     // In place of the favourites while there are none: OK opens Apps.
     readonly property var addFavouritesTile: ({title: t("add_favs_title"), action: "apps", symbol: "add"})
     signal stockRequested()
@@ -71,17 +74,32 @@ FocusScope {
     readonly property string neutral: theme.neutral
     readonly property string warning: theme.warning
     readonly property string fontName: inter.status === FontLoader.Ready ? inter.name : medium.name
-    readonly property int margin: 96
-    readonly property int tile: 120
-    readonly property int gap: 24
-    readonly property int appColumns: 12
-    readonly property int railY: 888
+    // The layout is drawn for 1920×1080 and scaled to the panel's real size:
+    // the TV's UI runs at 1280×720 on HD sets and at 1920×1080 on FHD and UHD
+    // ones (the TV scales it up to the panel). u is that scale; every length
+    // below goes through px(). Positions hang from the bottom and the right
+    // edge, so a wider screen simply gets a longer rail and more columns.
+    readonly property real u: width > 0 && height > 0 ? Math.min(width / 1920, height / 1080) : 1
+    function px(v) { return Math.round(v * u); }
+    readonly property int margin: px(96)
+    readonly property int tile: px(120)
+    readonly property int gap: px(24)
+    readonly property int appColumns: Math.max(4, Math.floor((width - 2*margin + gap) / (tile + gap)))
+    readonly property int railY: height - px(192)
+    // The Home rail: favourites, the input pills, the two doors. The pills
+    // get what is left of the width; the device name under "HDMI n" is cut to
+    // that, down to a floor, so the rail never runs past the right margin.
+    readonly property int railGroupGap: px(32)
+    readonly property int favsWidth: favSlots > 0 ? favSlots*(tile + gap) - gap : 0
+    readonly property int doorsWidth: 2*px(64) + px(12)
+    readonly property int pillRoom: width - 2*margin - favsWidth - doorsWidth - railGroupGap*(favSlots > 0 ? 2 : 1) - px(12)*Math.max(0, inputCount - 1)
+    readonly property int pillTextCap: Math.max(px(64), Math.min(px(180), Math.floor(pillRoom / Math.max(1, inputCount)) - px(44)))
     // The name sits just above the tiles; a line under it (a setting's value,
     // editing help, a message) lifts it by one line.
     // Without the name (setting "title", Home and Apps only) a line under it
     // still shows, just above the tiles.
     readonly property bool showTitle: settings.title !== false || page === "system" || page === "settings"
-    readonly property int heroBaseline: (page === "apps" ? 700 : 842) - (showTitle ? (hero.sub ? 36 : 0) : 20)
+    readonly property int heroBaseline: height - (page === "apps" ? px(380) : px(238)) - (showTitle ? (hero.sub ? px(36) : 0) : px(20))
     readonly property var hero: heroFor(page, selected, applications, favourites, editIndex, launching, message, notice, settingsItems, tools)
     readonly property var hints: hintsFor(page, selected, favouriteKeys, editIndex, lang, updateInfo)
     property color glowColor: hero.color
@@ -94,6 +112,10 @@ FocusScope {
     FontLoader { id: medium; source: "file:///usr/share/fonts/MuseoSans-Medium.ttf" }
 
     function t(key) { return Strings.get(lang, key); }
+    // Whether two lists hold the same things: the app and input lists are read
+    // again each time Home opens, and only a changed list replaces the old
+    // one, so the tiles are not torn down and built again for nothing.
+    function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
     function installed(id, apps) {
         for (var i=0; i<apps.length; i++) if (apps[i].id === id) return true;
         return false;
@@ -113,7 +135,11 @@ FocusScope {
             return !(x.optional && !installed(x.id, apps)) && !(x.stock && !stockHome);
         });
     }
-    function settingsFor(language, s, sysLang, upd) {
+    function inputTitle(id) {
+        for (var i=0; i<inputs.length; i++) if (inputs[i].id === id) return inputs[i].title;
+        return "HDMI " + id.slice(-1);
+    }
+    function settingsFor(language, s, sysLang, upd, inputList) {
         var langValue = s.lang === "system"
             ? Strings.format(t("val_system"), {lang: Strings.names[Strings.supported(sysLang) || "en"]})
             : Strings.names[s.lang];
@@ -121,7 +147,7 @@ FocusScope {
         list.push({key: "theme", title: t("set_theme"), value: t("theme_" + s.theme), symbol: "theme", action: "setting"});
         if (Config.exitTarget)
             list.push({key: "exitTo", title: t("set_exit"), symbol: "exit", action: "setting",
-                       value: s.exitTo === "last" ? t("val_last_input") : "HDMI " + s.exitTo.slice(-1)});
+                       value: s.exitTo === "last" ? t("val_last_input") : inputTitle(s.exitTo)});
         list.push({key: "clock", title: t("set_clock"), value: s.clock ? t("val_show") : t("val_hide"), symbol: "clock", action: "setting"});
         list.push({key: "title", title: t("set_title"), value: s.title ? t("val_name_show") : t("val_name_hide"), symbol: "title", action: "setting"});
         list.push({key: "update", title: t("set_update"), value: updateText(upd), symbol: "update", action: "update"});
@@ -185,7 +211,9 @@ FocusScope {
         } else if (key === "theme") {
             next.theme = Themes.ids[(Themes.ids.indexOf(settings.theme) + 1) % Themes.ids.length];
         } else if (key === "exitTo") {
-            var targets = ["last", "com.webos.app.hdmi1", "com.webos.app.hdmi2", "com.webos.app.hdmi3", "com.webos.app.hdmi4"];
+            // The last input, then each input the TV has.
+            var targets = ["last"];
+            for (var i=0; i<inputs.length; i++) targets.push(inputs[i].id);
             next.exitTo = targets[(targets.indexOf(settings.exitTo) + 1) % targets.length];
         } else if (key === "clock") next.clock = !settings.clock;
         else if (key === "title") next.title = !settings.title;
@@ -204,7 +232,7 @@ FocusScope {
             if (s && typeof s === "object") settings = {
                 lang: s.lang === "system" || Strings.languages.indexOf(s.lang) >= 0 ? s.lang : "system",
                 theme: Themes.ids.indexOf(s.theme) >= 0 ? s.theme : "default",
-                exitTo: /^(last|com\.webos\.app\.hdmi[1-4])$/.test(s.exitTo) ? s.exitTo : "last",
+                exitTo: /^(last|com\.webos\.app\.(hdmi|dp|usbc)\d)$/.test(s.exitTo) ? s.exitTo : "last",
                 clock: s.clock !== false,
                 title: s.title !== false,
                 beta: s.beta === true
@@ -248,10 +276,10 @@ FocusScope {
             h = editing >= 0
                 ? {title: f.title, sub: t("edit_sub"), color: f.accent}
                 : {title: f.title, sub: "", color: f.accent};
-        } else if (index < favSlots+4) {
+        } else if (index < favSlots+inputCount) {
             var input = inputs[index-favSlots];
             h = {title: input.title, sub: "", color: neutral};
-        } else if (index === favSlots+4) {
+        } else if (index === favSlots+inputCount) {
             h = {title: t("apps_title"), sub: "", color: neutral};
         } else {
             h = {title: t("system_title"), sub: "", color: neutral};
@@ -325,23 +353,30 @@ FocusScope {
         if (page === "apps") { if (applications[selected]) toggleFavourite(applications[selected]); }
         else if (page === "home" && selected < favCount) { editIndex = editIndex === selected ? -1 : selected; notice = ""; }
     }
-    // HDMI inputs from eim getAllInputStatus: the device under each is its
-    // HDMI-CEC name (subList SIMPLINK osdName), else the input's own label when
-    // it is not just "HDMI n" (e.g. a name set on the TV), else nothing.
+    // The TV's inputs from eim getAllInputStatus: HDMI, and DisplayPort or
+    // USB-C where a set has them. The device under each is its HDMI-CEC name
+    // (subList SIMPLINK osdName), else the input's own label when it is not
+    // just "HDMI n" (e.g. a name set on the TV), else nothing.
     function inputsFrom(devices) {
         var next = [];
         for (var i=0; i<devices.length; i++) {
             var d = devices[i];
-            if (!d.appId || d.appId.indexOf("com.webos.app.hdmi") !== 0) continue;
+            var kind = !d.appId ? "" : d.appId.indexOf("com.webos.app.hdmi") === 0 ? "HDMI"
+                : d.appId.indexOf("com.webos.app.dp") === 0 ? "DP" : d.appId.indexOf("com.webos.app.usbc") === 0 ? "USB-C" : "";
+            if (!kind) continue;
+            var title = kind === "HDMI" ? "HDMI " + d.port : (d.label || kind + " " + d.port);
             var name = "", subs = d.subList || [];
             for (var j=0; j<subs.length; j++) if (subs[j].id === "SIMPLINK" && subs[j].osdName) { name = subs[j].osdName; break; }
-            if (!name && d.label && d.label !== "HDMI " + d.port) name = d.label;
+            if (!name && d.label && d.label !== title) name = d.label;
             // Something is plugged in: the TV says so (webOS 4: hdmiPlugIn,
             // webOS 10: activate) or a device answers over HDMI-CEC.
             var present = !!(d.hdmiPlugIn || d.activate || subs.some(function(s) { return s.id === "SIMPLINK" && s.osdName; }));
-            next.push({id: d.appId, title: "HDMI " + d.port, detail: name, present: present});
+            next.push({id: d.appId, title: title, detail: name, present: present});
         }
         return next;
+    }
+    function setInputs(next) {
+        if (next.length && !same(next, inputs)) inputs = next;
     }
     function describe(appId) {
         if (!appId || appId === "com.webos.app.home") return false;
@@ -377,10 +412,10 @@ FocusScope {
         if (page === "settings") return settingsItems[index];
         if (showAddTile && index === 0) return addFavouritesTile;
         if (index < favCount) return favourites[index];
-        if (index < favSlots+4) return inputs[index-favSlots];
-        return index === favSlots+4 ? {title: t("apps_title"), action: "apps", symbol: "apps"} : {title: t("system_title"), action: "system", symbol: "settings"};
+        if (index < favSlots+inputCount) return inputs[index-favSlots];
+        return index === favSlots+inputCount ? {title: t("apps_title"), action: "apps", symbol: "apps"} : {title: t("system_title"), action: "system", symbol: "settings"};
     }
-    // Home and System are one rail; All applications is a twelve-column grid.
+    // Home and System are one rail; All applications is a grid of appColumns.
     function isOk(key) { return key === Qt.Key_Return || key === Qt.Key_Enter || key === Qt.Key_Select; }
     function isBack(key) { return key === WebOS.Key_webOS_Back || key === Qt.Key_Escape || key === Qt.Key_Back || key === Qt.Key_Backspace || key === 461; }
     function isYellow(key) { return key === WebOS.Key_webOS_Yellow || key === 405; }
@@ -395,7 +430,7 @@ FocusScope {
             else return false;
             return true;
         }
-        var count = page === "home" ? favSlots+6 : page === "apps" ? applications.length : page === "settings" ? settingsItems.length : tools.length;
+        var count = page === "home" ? favSlots+inputCount+2 : page === "apps" ? applications.length : page === "settings" ? settingsItems.length : tools.length;
         var columns = page === "apps" ? appColumns : count;
         if (key === Qt.Key_Left) { if (selected % columns > 0) selected--; }
         else if (key === Qt.Key_Right) { if (selected % columns < columns-1 && selected+1 < count) selected++; }
@@ -403,11 +438,11 @@ FocusScope {
         else if (key === Qt.Key_Down) {
             if (selected+columns < count) selected += columns;
             else if (Math.floor(selected/columns) < Math.floor((count-1)/columns)) selected = count-1;
-        } else if (key === Qt.Key_Return || key === Qt.Key_Enter || key === Qt.Key_Select) activate(itemAt(selected));
-        else if (key === WebOS.Key_webOS_Back || key === Qt.Key_Escape || key === Qt.Key_Back || key === Qt.Key_Backspace || key === 461) {
+        } else if (isOk(key)) activate(itemAt(selected));
+        else if (isBack(key)) {
             if (page === "home") closeHome();
             else if (page === "settings") { page = "system"; selected = toolIndex("launcherSettings"); }
-            else { selected = favSlots + (page === "apps" ? 4 : 5); page = "home"; }
+            else { selected = favSlots + inputCount + (page === "apps" ? 0 : 1); page = "home"; }
         } else return false;
         return true;
     }
@@ -415,9 +450,7 @@ FocusScope {
         for (var i=0; i<tools.length; i++) if (tools[i].action === action) return i;
         return 0;
     }
-    function actionKey(key) {
-        return key === Qt.Key_Return || key === Qt.Key_Enter || key === Qt.Key_Select || key === WebOS.Key_webOS_Back || key === Qt.Key_Escape || key === Qt.Key_Back || key === Qt.Key_Backspace || key === 461;
-    }
+    function actionKey(key) { return isOk(key) || isBack(key); }
     // Activate on release: switching focus on press would deliver the same
     // OK release to LG's ribbon and accidentally launch a second application.
     // Holding OK past holdTimer runs secondaryAction instead of activating.
@@ -449,7 +482,7 @@ FocusScope {
         editIndex = -1; notice = "";
         if (foreground) {
             launching = false; message = ""; page="home"; selected=0; forceActiveFocus();
-            clock = Qt.formatTime(new Date(), "hh:mm");
+            tick();
             if (ready) { catalog.callService({}); foregroundInfo.callService({extraInfo: true}); loadInputs(); }
         }
     }
@@ -461,7 +494,15 @@ FocusScope {
         if (foreground) foregroundInfo.callService({extraInfo: true});
     }
     onVisibleChanged: { if (visible && foreground) forceActiveFocus(); }
-    Component.onCompleted: clock = Qt.formatTime(new Date(), "hh:mm")
+    Component.onCompleted: tick()
+    // The clock changes on the minute: each tick sets the next one for when
+    // the minute turns, so the bar is never half a minute behind.
+    function tick() {
+        var now = new Date();
+        clock = Qt.formatTime(now, "hh:mm");
+        clockTimer.interval = 60000 - (now.getSeconds()*1000 + now.getMilliseconds()) + 50;
+    }
+    Timer { id: clockTimer; interval: 60000; repeat: true; running: shell.foreground; onTriggered: tick() }
 
     Service {
         id: launchService
@@ -490,6 +531,7 @@ FocusScope {
                 var icon = entry.largeIcon || entry.icon;
                 next.push({id: entry.id, title: entry.title || entry.id, icon: icon ? "file://"+icon : ""});
             }
+            if (same(next, applications)) return;
             applications=next;
             if (page === "apps") selected=Math.max(0, Math.min(selected, next.length-1));
         }
@@ -525,10 +567,7 @@ FocusScope {
         appId: "com.webos.app.home"
         service: "com.webos.service.eim"
         method: "getAllInputStatus"
-        onCallSuccess: {
-            var next = response.devices ? inputsFrom(response.devices) : [];
-            if (next.length) inputs = next;
-        }
+        onCallSuccess: setInputs(response.devices ? inputsFrom(response.devices) : [])
     }
     // Updates: update.sh, run as root through the Homebrew Channel's exec.
     function updateRun(step, channel) {
@@ -550,7 +589,6 @@ FocusScope {
         onError: updateResult(step, null)
     }
     Timer { id: launchTimeout; interval: 8000; onTriggered: { launching=false; message=t("err_slow"); } }
-    Timer { interval: 30000; repeat: true; running: shell.foreground; onTriggered: clock = Qt.formatTime(new Date(), "hh:mm") }
 
     function drawGlyph(c, symbol) {
         c.beginPath();
@@ -612,7 +650,7 @@ FocusScope {
         id: panel
         anchors.fill: parent
         opacity: shell.foreground ? 1 : 0
-        property real lift: shell.foreground ? 0 : 24
+        property real lift: shell.foreground ? 0 : shell.px(24)
         transform: Translate { y: panel.lift }
         Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         Behavior on lift { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
@@ -622,7 +660,7 @@ FocusScope {
         Rectangle {
             id: scrim
             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-            height: shell.page === "apps" ? 660 : 540
+            height: shell.page === "apps" ? shell.px(660) : shell.px(540)
             property color tint: shell.theme.scrim
             function a(v) { return Qt.rgba(tint.r, tint.g, tint.b, v); }
             gradient: Gradient {
@@ -633,10 +671,14 @@ FocusScope {
                 GradientStop { position: 1.00; color: scrim.a(0.93) }
             }
         }
+        // The glow in the bottom-left corner, in the colour of what is
+        // focused. A shader, so it covers only the part of the screen it
+        // reaches: a full-screen one is the costliest thing a TV's GPU is
+        // asked for here, and it is redrawn while the colour fades.
         RadialGradient {
-            anchors.fill: parent
-            horizontalOffset: -768; verticalOffset: 605
-            horizontalRadius: 1200; verticalRadius: 520
+            x: 0; y: parent.height - shell.px(455); width: shell.px(1400); height: shell.px(455)
+            horizontalOffset: shell.px(192) - width/2; verticalOffset: shell.px(520) - height/2
+            horizontalRadius: shell.px(1200); verticalRadius: shell.px(520)
             gradient: Gradient {
                 GradientStop { position: 0; color: Qt.rgba(shell.glowColor.r, shell.glowColor.g, shell.glowColor.b, 0.34) }
                 GradientStop { position: 0.72; color: Qt.rgba(shell.glowColor.r, shell.glowColor.g, shell.glowColor.b, 0) }
@@ -648,53 +690,57 @@ FocusScope {
         Rectangle {
             id: status
             visible: shell.settings.clock !== false
-            anchors.right: parent.right; anchors.rightMargin: shell.margin; y: 32
-            width: statusRow.width + 48; height: 56; radius: 18
+            anchors.right: parent.right; anchors.rightMargin: shell.margin; y: shell.px(32)
+            width: statusRow.width + shell.px(48); height: shell.px(56); radius: shell.px(18)
             color: shell.surface; border.width: 1; border.color: shell.theme.surfaceEdge
             Row {
                 id: statusRow
-                anchors.centerIn: parent; spacing: 18
+                anchors.centerIn: parent; spacing: shell.px(18)
                 Row {
-                    visible: nowTitle !== ""; spacing: 10; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle { width: 7; height: 7; radius: 3.5; color: shell.theme.focus; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: nowTitle; font.family: shell.fontName; font.pixelSize: 19; color: shell.theme.text; anchors.verticalCenter: parent.verticalCenter }
+                    visible: nowTitle !== ""; spacing: shell.px(10); anchors.verticalCenter: parent.verticalCenter
+                    Rectangle { width: shell.px(7); height: width; radius: width/2; color: shell.theme.focus; anchors.verticalCenter: parent.verticalCenter }
+                    Text {
+                        text: nowTitle; font.family: shell.fontName; font.pixelSize: shell.px(19); color: shell.theme.text; anchors.verticalCenter: parent.verticalCenter
+                        // A long app name is cut, not the chip pushed off the screen.
+                        width: Math.min(implicitWidth, shell.px(480)); elide: Text.ElideRight
+                    }
                 }
-                Rectangle { visible: nowTitle !== ""; width: 1; height: 20; color: shell.theme.divider; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: clock; font.family: shell.fontName; font.bold: true; font.pixelSize: 26; font.letterSpacing: -0.4; color: shell.theme.heading; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { visible: nowTitle !== ""; width: 1; height: shell.px(20); color: shell.theme.divider; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: clock; font.family: shell.fontName; font.bold: true; font.pixelSize: shell.px(26); font.letterSpacing: -0.4*shell.u; color: shell.theme.heading; anchors.verticalCenter: parent.verticalCenter }
             }
         }
 
         // Hero: the focused name and one line of context under it.
         Item {
             id: heroGroup
-            x: shell.margin; y: shell.heroBaseline - 160
-            width: 1700; height: 220
-            Item { id: heroBase; y: 160; width: 1; height: 1 }
+            x: shell.margin; y: shell.heroBaseline - shell.px(160)
+            width: shell.width - 2*shell.margin; height: shell.px(220)
+            Item { id: heroBase; y: shell.px(160); width: 1; height: 1 }
             Text {
-                width: 1700; anchors.baseline: heroBase.top
+                width: parent.width; anchors.baseline: heroBase.top
                 visible: shell.showTitle
                 text: shell.hero.title; elide: Text.ElideRight
-                font.family: shell.fontName; font.bold: true; font.pixelSize: 60; font.letterSpacing: -1.8; color: shell.theme.heading; style: Text.Raised; styleColor: shell.theme.headingShadow
+                font.family: shell.fontName; font.bold: true; font.pixelSize: shell.px(60); font.letterSpacing: -1.8*shell.u; color: shell.theme.heading; style: Text.Raised; styleColor: shell.theme.headingShadow
             }
             Text {
-                y: 160 + 14
-                text: shell.hero.sub; font.family: shell.fontName; font.pixelSize: 22
+                y: shell.px(174); width: parent.width; elide: Text.ElideRight
+                text: shell.hero.sub; font.family: shell.fontName; font.pixelSize: shell.px(22)
                 color: message ? shell.warning : notice ? shell.theme.heading : shell.theme.text
             }
         }
 
         // Controls for what is focused, on the bottom line with the version.
         Row {
-            x: shell.margin; y: 1033; spacing: 24
+            x: shell.margin; y: shell.height - shell.px(47); spacing: shell.px(24)
             Repeater {
                 model: shell.hints
                 Row {
-                    spacing: 9
+                    spacing: shell.px(9)
                     Rectangle {
-                        width: keyLabel.implicitWidth+14; height: 24; radius: 7; color: "transparent"; border.width: 1.5; border.color: shell.theme.keyEdge
-                        Text { id: keyLabel; anchors.centerIn: parent; text: modelData[0]; font.family: shell.fontName; font.bold: true; font.pixelSize: 12; color: shell.theme.keyLabel }
+                        width: keyLabel.implicitWidth+shell.px(14); height: shell.px(24); radius: shell.px(7); color: "transparent"; border.width: Math.max(1, 1.5*shell.u); border.color: shell.theme.keyEdge
+                        Text { id: keyLabel; anchors.centerIn: parent; text: modelData[0]; font.family: shell.fontName; font.bold: true; font.pixelSize: shell.px(12); color: shell.theme.keyLabel }
                     }
-                    Text { text: modelData[1]; font.family: shell.fontName; font.pixelSize: 15; color: shell.theme.hint; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: modelData[1]; font.family: shell.fontName; font.pixelSize: shell.px(15); color: shell.theme.hint; anchors.verticalCenter: parent.verticalCenter }
                 }
             }
         }
@@ -707,30 +753,31 @@ FocusScope {
                 property var entry
                 property int navIndex: 0
                 readonly property int size: shell.tile
-                readonly property int corner: 30
+                readonly property int corner: shell.px(30)
                 property bool chosen: shell.selected === navIndex
                 readonly property bool editing: shell.page === "home" && shell.editIndex === navIndex
                 readonly property bool starred: shell.page === "apps" && entry !== undefined && shell.favouriteKeys.indexOf(entry.id) >= 0
                 width: size; height: size
                 z: chosen ? 2 : 0
                 scale: chosen ? (shell.pressing ? 1.03 : 1.1) : 1
-                property real lift: chosen ? -6 : 0
+                property real lift: chosen ? -6*shell.u : 0
                 Behavior on lift { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 transform: Translate { y: cell.lift }
                 Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                Rectangle { visible: cell.chosen; anchors.centerIn: parent; width: cell.size+14; height: width; radius: cell.corner+7; color: cell.editing ? shell.warning : shell.theme.ring }
-                Rectangle { visible: cell.chosen; anchors.centerIn: parent; width: cell.size+8; height: width; radius: cell.corner+4; color: shell.theme.gap }
+                Rectangle { visible: cell.chosen; anchors.centerIn: parent; width: cell.size+shell.px(14); height: width; radius: cell.corner+shell.px(7); color: cell.editing ? shell.warning : shell.theme.ring }
+                Rectangle { visible: cell.chosen; anchors.centerIn: parent; width: cell.size+shell.px(8); height: width; radius: cell.corner+shell.px(4); color: shell.theme.gap }
                 Rectangle { anchors.fill: parent; radius: cell.corner; color: shell.theme.tile }
                 Text {
                     visible: icon.status !== Image.Ready
                     anchors.centerIn: parent; text: cell.entry && cell.entry.title ? cell.entry.title.charAt(0) : ""
-                    font.family: shell.fontName; font.bold: true; font.pixelSize: 40; color: shell.ink2
+                    font.family: shell.fontName; font.bold: true; font.pixelSize: shell.px(40); color: shell.ink2
                 }
                 Image {
                     id: icon; anchors.fill: parent; visible: false
                     source: cell.entry && cell.entry.icon ? cell.entry.icon : ""
                     fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true
-                    sourceSize.width: 240; sourceSize.height: 240
+                    // Decoded at twice the tile, for the focus zoom; no larger.
+                    sourceSize.width: 2*shell.tile; sourceSize.height: 2*shell.tile
                 }
                 Rectangle { id: corners; anchors.fill: parent; radius: cell.corner; visible: false }
                 OpacityMask { anchors.fill: parent; source: icon; maskSource: corners; visible: icon.status === Image.Ready }
@@ -738,15 +785,15 @@ FocusScope {
                 Repeater {
                     model: cell.editing ? ["‹", "›"] : []
                     Rectangle {
-                        x: index === 0 ? -14 : cell.size-14; anchors.verticalCenter: parent.verticalCenter
-                        width: 28; height: 44; radius: 14; color: shell.theme.handle; border.width: 2; border.color: shell.warning
-                        Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -2; text: modelData; font.family: shell.fontName; font.bold: true; font.pixelSize: 30; color: shell.warning }
+                        x: index === 0 ? -shell.px(14) : cell.size-shell.px(14); anchors.verticalCenter: parent.verticalCenter
+                        width: shell.px(28); height: shell.px(44); radius: shell.px(14); color: shell.theme.handle; border.width: Math.max(1, 2*shell.u); border.color: shell.warning
+                        Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -2*shell.u; text: modelData; font.family: shell.fontName; font.bold: true; font.pixelSize: shell.px(30); color: shell.warning }
                     }
                 }
                 // Favourite marker in All applications.
                 Rectangle {
-                    visible: cell.starred; x: cell.size-20; y: -6; width: 26; height: 26; radius: 13
-                    color: shell.theme.focus; border.width: 3; border.color: shell.theme.gap
+                    visible: cell.starred; x: cell.size-shell.px(20); y: -shell.px(6); width: shell.px(26); height: width; radius: width/2
+                    color: shell.theme.focus; border.width: shell.px(3); border.color: shell.theme.gap
                 }
                 MouseArea {
                     anchors.fill: parent; hoverEnabled: true
@@ -763,18 +810,20 @@ FocusScope {
                 property var entry
                 property int navIndex: 0
                 // Size comes from the Loader so the Canvas paints once at the right scale.
-                readonly property int size: parent && parent.glyphSize ? parent.glyphSize : 88
-                readonly property int corner: size > 100 ? 30 : size > 70 ? 24 : 18
+                readonly property int size: parent && parent.glyphSize ? parent.glyphSize : shell.px(88)
+                readonly property bool big: size > 100*shell.u
+                readonly property bool mid: size > 70*shell.u
+                readonly property int corner: big ? shell.px(30) : mid ? shell.px(24) : shell.px(18)
                 property bool chosen: shell.selected === navIndex
                 width: size; height: size
                 z: chosen ? 2 : 0
                 scale: chosen ? (shell.pressing ? 1.03 : 1.1) : 1
-                property real lift: chosen ? -6 : 0
+                property real lift: chosen ? -6*shell.u : 0
                 Behavior on lift { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 transform: Translate { y: glyphCell.lift }
                 Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                Rectangle { visible: glyphCell.chosen; anchors.centerIn: parent; width: glyphCell.size+14; height: width; radius: glyphCell.corner+7; color: shell.theme.ring }
-                Rectangle { visible: glyphCell.chosen; anchors.centerIn: parent; width: glyphCell.size+8; height: width; radius: glyphCell.corner+4; color: shell.theme.gap }
+                Rectangle { visible: glyphCell.chosen; anchors.centerIn: parent; width: glyphCell.size+shell.px(14); height: width; radius: glyphCell.corner+shell.px(7); color: shell.theme.ring }
+                Rectangle { visible: glyphCell.chosen; anchors.centerIn: parent; width: glyphCell.size+shell.px(8); height: width; radius: glyphCell.corner+shell.px(4); color: shell.theme.gap }
                 Rectangle {
                     anchors.fill: parent; radius: glyphCell.corner
                     color: glyphCell.chosen ? shell.theme.focus : shell.chip
@@ -782,15 +831,16 @@ FocusScope {
                     Behavior on color { ColorAnimation { duration: 180 } }
                 }
                 Canvas {
-                    property int box: glyphCell.size > 100 ? 44 : glyphCell.size > 70 ? 32 : 28
+                    property int box: glyphCell.big ? shell.px(44) : glyphCell.mid ? shell.px(32) : shell.px(28)
                     anchors.centerIn: parent; width: box; height: box
                     property string symbol: glyphCell.entry && glyphCell.entry.symbol ? glyphCell.entry.symbol : ""
                     property string stroke: glyphCell.chosen ? shell.theme.onFocus : shell.ink
                     onSymbolChanged: requestPaint()
                     onStrokeChanged: requestPaint()
+                    onBoxChanged: requestPaint()
                     onPaint: {
                         var c=getContext("2d"); c.reset(); c.scale(box/40, box/40);
-                        c.strokeStyle = stroke; c.lineWidth = 2.2*40/box; c.lineCap="round"; c.lineJoin="round";
+                        c.strokeStyle = stroke; c.lineWidth = Math.max(1.5, 2.2*shell.u)*40/box; c.lineCap="round"; c.lineJoin="round";
                         shell.drawGlyph(c, symbol);
                     }
                 }
@@ -804,8 +854,13 @@ FocusScope {
 
         // Home rail: favourites, sources, then the two doors.
         Row {
+            id: rail
             visible: page === "home"
-            x: shell.margin; y: shell.railY; height: shell.tile; spacing: 32
+            x: shell.margin; y: shell.railY; height: shell.tile; spacing: shell.railGroupGap
+            // Should the rail still be wider than the screen allows (a set
+            // with many inputs), it is drawn a little smaller rather than cut.
+            transformOrigin: Item.Left
+            scale: Math.min(1, (shell.width - 2*shell.margin) / Math.max(1, width))
             Row {
                 spacing: shell.gap; anchors.verticalCenter: parent.verticalCenter
                 Repeater {
@@ -824,14 +879,14 @@ FocusScope {
                 }
             }
             Row {
-                spacing: 12; anchors.verticalCenter: parent.verticalCenter
+                spacing: shell.px(12); anchors.verticalCenter: parent.verticalCenter
                 Repeater {
                     model: inputs
                     Rectangle {
                         id: pill
                         property bool chosen: shell.selected === shell.favSlots+index
-                        property real lift: chosen ? -4 : 0
-                        width: Math.max(pillLabel.implicitWidth, pillDevice.visible ? pillDevice.width : 0)+44; height: 64; radius: 18
+                        property real lift: chosen ? -4*shell.u : 0
+                        width: Math.max(pillLabel.implicitWidth, pillDevice.visible ? pillDevice.width : 0)+shell.px(44); height: shell.px(64); radius: shell.px(18)
                         color: chosen ? shell.theme.focus : shell.chip
                         border.width: chosen ? 0 : 1; border.color: shell.chipEdge
                         // Nothing plugged in: the pill stays solid, its text dimmed.
@@ -846,13 +901,13 @@ FocusScope {
                             anchors.centerIn: parent; spacing: 1
                             Text {
                                 id: pillLabel; anchors.horizontalCenter: parent.horizontalCenter; text: modelData.title
-                                font.family: shell.fontName; font.bold: true; font.pixelSize: pillDevice.visible ? 19 : 21; font.letterSpacing: -0.2
+                                font.family: shell.fontName; font.bold: true; font.pixelSize: pillDevice.visible ? shell.px(19) : shell.px(21); font.letterSpacing: -0.2*shell.u
                                 color: pill.chosen ? shell.theme.onFocus : pill.dim ? shell.theme.dim : shell.theme.label
                             }
                             Text {
                                 id: pillDevice; visible: !!modelData.detail; anchors.horizontalCenter: parent.horizontalCenter
-                                text: modelData.detail || ""; width: Math.min(implicitWidth, 140); elide: Text.ElideRight
-                                font.family: shell.fontName; font.pixelSize: 13
+                                text: modelData.detail || ""; width: Math.min(implicitWidth, shell.pillTextCap); elide: Text.ElideRight
+                                font.family: shell.fontName; font.pixelSize: shell.px(13)
                                 color: pill.chosen ? shell.theme.onFocus2 : pill.dim ? shell.theme.dim2 : shell.ink3
                             }
                         }
@@ -865,35 +920,40 @@ FocusScope {
                 }
             }
             Row {
-                spacing: 12; anchors.verticalCenter: parent.verticalCenter
+                spacing: shell.px(12); anchors.verticalCenter: parent.verticalCenter
                 Repeater {
                     model: 2
                     Loader {
-                        property int glyphSize: 64
+                        property int glyphSize: shell.px(64)
                         sourceComponent: glyphTile
                         onLoaded: {
                             item.entry = Qt.binding(function() { return index === 0 ? {title: shell.t("apps_title"), action: "apps", symbol: "apps"} : {title: shell.t("system_title"), action: "system", symbol: "settings"}; });
-                            item.navIndex = Qt.binding(function() { return shell.favSlots+4+index; });
+                            item.navIndex = Qt.binding(function() { return shell.favSlots+shell.inputCount+index; });
                         }
                     }
                 }
             }
         }
 
-        // All applications: twelve columns of tiles, two rows visible.
+        // All applications: as many columns as the width takes, two rows visible.
         Flickable {
             id: appGrid
             visible: page === "apps"
-            x: shell.margin-20; y: 744-24; width: shell.appColumns*(shell.tile+shell.gap)-shell.gap+40; height: 2*shell.tile+shell.gap+48
+            x: shell.margin-shell.px(20); y: shell.height-shell.px(360); width: shell.appColumns*(shell.tile+shell.gap)-shell.gap+shell.px(40); height: 2*shell.tile+shell.gap+shell.px(48)
             clip: true; interactive: false
             readonly property int step: shell.tile+shell.gap
-            contentWidth: width; contentHeight: Math.max(height, Math.ceil(applications.length/shell.appColumns)*step+48-shell.gap)
+            readonly property int firstRow: Math.round(contentY/step)
+            contentWidth: width; contentHeight: Math.max(height, Math.ceil(applications.length/shell.appColumns)*step+shell.px(48)-shell.gap)
             Behavior on contentY { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
             Repeater {
                 model: applications
                 Loader {
-                    x: 20+(index%shell.appColumns)*appGrid.step; y: 24+Math.floor(index/shell.appColumns)*appGrid.step
+                    readonly property int row: Math.floor(index/shell.appColumns)
+                    x: shell.px(20)+(index%shell.appColumns)*appGrid.step; y: shell.px(24)+row*appGrid.step
                     z: item && item.chosen ? 2 : 0
+                    // Only the rows on screen and the next one are built; a long
+                    // list is not a long wait, nor a hundred icons in memory.
+                    active: row >= appGrid.firstRow-1 && row <= appGrid.firstRow+2
                     sourceComponent: appTile
                     onLoaded: { item.entry=modelData; item.navIndex=index; }
                 }
@@ -911,9 +971,9 @@ FocusScope {
         }
         Rectangle {
             visible: page === "apps" && appGrid.contentHeight > appGrid.height
-            x: 1920-shell.margin+20; y: 744; width: 4; height: 2*shell.tile+shell.gap; radius: 2; color: shell.theme.track
+            x: shell.width-shell.margin+shell.px(20); y: shell.height-shell.px(336); width: shell.px(4); height: 2*shell.tile+shell.gap; radius: width/2; color: shell.theme.track
             Rectangle {
-                width: 4; radius: 2; color: shell.theme.focus
+                width: parent.width; radius: width/2; color: shell.theme.focus
                 height: parent.height*appGrid.height/appGrid.contentHeight
                 y: (parent.height-height)*appGrid.contentY/Math.max(1, appGrid.contentHeight-appGrid.height)
             }
@@ -933,10 +993,12 @@ FocusScope {
             }
         }
 
+        // The version, the TV's webOS and the variant, bottom right.
         Text {
             visible: page === "system" || page === "settings"
-            anchors.right: parent.right; anchors.rightMargin: shell.margin; y: 1037
-            text: "Homebar " + Config.version + (Config.platform ? " · " + Config.platform : ""); font.family: shell.fontName; font.pixelSize: 14; color: shell.theme.version
+            anchors.right: parent.right; anchors.rightMargin: shell.margin; y: shell.height-shell.px(43)
+            text: "Homebar " + Config.version + (Config.webos ? " · webOS " + Config.webos : "") + (Config.platform ? " · " + Config.platform : "")
+            font.family: shell.fontName; font.pixelSize: shell.px(14); color: shell.theme.version
         }
     } // panel
 }

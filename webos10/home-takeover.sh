@@ -43,12 +43,16 @@ home_type_is() {
   return 1
 }
 
+# LG's own Home process: flutter-client running the Home id (webOS 10), or
+# the QML Home's own process on a webOS where Home is a QML app and the
+# overlay was chosen anyway. The stand-in itself runs in the web app manager.
 lg_home_pids() {
   for cmd in /proc/[0-9]*/cmdline; do
     { tr '\0' ' ' < "$cmd"; } 2>/dev/null | grep -q '^/usr/bin/flutter-client .*-i com\.webos\.app\.home ' || continue
     pid=${cmd#/proc/}
     echo "${pid%/cmdline}"
   done
+  pidof com.webos.app.home 2>/dev/null | tr ' ' '\n'
 }
 
 case "$1" in

@@ -1,9 +1,9 @@
 // Fragment, not a standalone file: tools/build.py puts it into Panel.qml in
 // place of ui/Launcher.qml's Service elements (from "Service { id:
 // launchService" up to "Timer { id: launchTimeout").
-    // webOS 10: Luna goes through the root helper over HTTP (webOS 10 answers
-    // nothing to a developer QML app). Same callService() shape as the Service
-    // elements it replaces in ui/Launcher.qml.
+    // Overlay variant: Luna goes through the root helper over HTTP (webOS 10
+    // answers nothing to a developer QML app). Same callService() shape as
+    // the Service elements it replaces in ui/Launcher.qml.
     readonly property string helper: "http://127.0.0.1:8899"
     function http(pathname, done, failed) {
         var xhr = new XMLHttpRequest();
@@ -18,10 +18,7 @@
         xhr.send();
     }
     function loadInputs() {
-        http("/inputs", function(r) {
-            var next = r.devices ? inputsFrom(r.devices) : [];
-            if (next.length) inputs = next;
-        });
+        http("/inputs", function(r) { setInputs(r.devices ? inputsFrom(r.devices) : []); });
     }
     QtObject {
         id: launchService
@@ -47,6 +44,7 @@
                     if (Config.excluded.indexOf(a.id) >= 0) continue;
                     next.push({id: a.id, title: a.title, icon: a.icon ? shell.helper + "/" + a.icon : ""});
                 }
+                if (same(next, applications)) return;
                 applications = next;
                 if (page === "apps") selected = Math.max(0, Math.min(selected, next.length-1));
             });

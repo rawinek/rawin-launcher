@@ -1,73 +1,116 @@
-// rawin-launcher for webOS 4: build patched copies of LG Home's main.qml and
+// Homebar, the Home panel variant (webOS 4, and any webOS whose LG Home is a
+// QML app): build patched copies of LG Home's main.qml and
 // Controllers/UIController.qml from the firmware originals.
 //
 // main.qml gets a Loader for the launcher panel (current/Launcher.qml) on top
 // of LG's UI, which stays in the same process, so LG's window, lifecycle and
 // HOME handling are kept. LG's own ribbon is shown only when the panel asks
-// for it ("Original Home"); BLUE comes back. Every replacement must match
-// exactly once, so a firmware with a different Home is refused, not guessed at.
+// for it ("Original Home"); BLUE comes back.
 //
-// Usage: node patch-home.js <dir>   (reads <dir>/main.original.qml and
-// <dir>/UIController.original.qml, writes <dir>/main.qml and <dir>/UIController.qml)
-// Plain ES5 for old node versions.
+// LG's Home differs between webOS versions, so the patch is made of pieces.
+// The ones the panel cannot do without must be found, exactly once: the
+// QtQuick import, the root element and its id, the UI controller, and the
+// foreground state and window interface the panel reads. The others (focus
+// coming back, the BLUE key, LG's hidden mode, voice and "Home shown" paths)
+// go in where they match and are reported where they do not, so a Home that
+// was never tested gets the panel with what fits instead of nothing.
+//
+// Usage: node patch-home.js [--check] <dir>
+//   reads <dir>/main.original.qml and <dir>/UIController.original.qml and
+//   writes <dir>/main.qml and <dir>/UIController.qml; with --check it only
+//   says whether the panel fits (exit 0) or not (exit 1) and writes nothing.
+// Plain ES5 for old node versions (webOS 3 and 4 have node 0.12).
 'use strict';
 var fs = require('fs');
 var path = require('path');
 
-var dir = process.argv[2];
+var args = process.argv.slice(2);
+var check = args[0] === '--check';
+if (check) args.shift();
+var dir = args[0];
 if (!dir) {
-  console.error('usage: node patch-home.js <dir>');
+  console.error('usage: node patch-home.js [--check] <dir>');
   process.exit(2);
 }
 
-var INJECTION = [
-  '',
-  '    // rawin-launcher: the panel on top of LG Home, in LG\'s own process.',
-  '    property bool cleanHomeStock: false',
-  '    Loader {',
-  '        id: cleanHomeLoader',
-  '        z: 500',
-  '        anchors.fill: parent',
-  '        source: "file:///var/lib/webosbrew/rawin-launcher/current/Launcher.qml"',
-  '        visible: !rootWindow.cleanHomeStock',
-  '        onStatusChanged: {',
-  '            if (status === Loader.Error) rootWindow.cleanHomeStock = true;',
-  '        }',
-  '        onLoaded: {',
-  '            item.hostWindow = rootWindow;',
-  '            item.ready = Qt.binding(function() { return systemProperties.isAppReadyToUse; });',
-  '            item.foreground = Qt.binding(function() { return systemProperties.isAppForeground && !rootWindow.cleanHomeStock; });',
-  '        }',
-  '    }',
-  '    Connections {',
-  '        target: cleanHomeLoader.item',
-  '        onStockRequested: { rootWindow.cleanHomeStock = true; uiController.currentMode="main"; uiController.startApp(); uiController.forceActiveFocus(); }',
-  '        onCloseRequested: { interfaces.application.closeApp(); }',
-  '    }',
-  '    Connections {',
-  '        target: systemProperties',
-  '        onIsAppForegroundChanged: {',
-  '            if (systemProperties.isAppForeground) rootWindow.cleanHomeStock=false;',
-  '        }',
-  '    }',
-  '    Rectangle {',
-  '        z: 600',
-  '        visible: rootWindow.cleanHomeStock && systemProperties.isAppForeground',
-  '        anchors.right: parent.right; anchors.rightMargin: 60; y: 45',
-  '        width: 450; height: 58; radius: 29; color: "#152d32"',
-  '        Text { anchors.centerIn: parent; text: "Blue · back to rawin-launcher"; color: "#8be2cb"; font.pixelSize: 22 }',
-  '        MouseArea { anchors.fill: parent; onClicked: { rootWindow.cleanHomeStock=false; cleanHomeLoader.item.forceActiveFocus(); } }',
-  '    }',
-  ''
-].join('\n');
-
-function replaceOnce(text, oldText, newText, what) {
-  var at = text.indexOf(oldText);
-  if (at < 0 || text.indexOf(oldText, at + oldText.length) >= 0) {
-    console.error('rawin-launcher: LG Home differs from the tested firmware (' + what + '); nothing changed');
-    process.exit(1);
+var notes = [];
+function refuse(what) {
+  console.error('rawin-launcher: LG Home differs from the tested one (' + what + '); nothing changed');
+  process.exit(1);
+}
+// The one match of re in text, or null when it matches never or more than once.
+function once(text, re) {
+  var m = re.exec(text);
+  if (!m) return null;
+  if (re.exec(text.slice(m.index + m[0].length))) return null;
+  return m;
+}
+// Puts replacement (text, or a function of the match) in place of the one
+// match. A required piece that is missing refuses the whole patch; an
+// optional one is noted and skipped.
+function replaceOnce(text, re, replacement, what, required) {
+  var m = once(text, re);
+  if (!m) {
+    var reason = what + (re.exec(text) ? ' found more than once' : ' not found');
+    if (required) refuse(reason);
+    notes.push(reason + '; skipped');
+    return text;
   }
-  return text.slice(0, at) + newText + text.slice(at + oldText.length);
+  var out = typeof replacement === 'function' ? replacement(m) : replacement;
+  return text.slice(0, m.index) + out + text.slice(m.index + m[0].length);
+}
+
+// What goes into LG's root element. ROOT is the root element's id.
+function injection(ROOT) {
+  return [
+    '',
+    '    // Homebar: the panel on top of LG Home, in LG\'s own process.',
+    '    property bool cleanHomeStock: false',
+    '    // LG Home\'s own foreground state (systemProperties), or true on a Home',
+    '    // that has none to read: the panel shows whenever Home is in front and',
+    '    // LG\'s ribbon was not asked for.',
+    '    property bool cleanHomeForeground: true',
+    '    onCleanHomeForegroundChanged: { if (cleanHomeForeground) cleanHomeStock = false; }',
+    '    Loader {',
+    '        id: cleanHomeLoader',
+    '        z: 500',
+    '        anchors.fill: parent',
+    '        source: "file:///var/lib/webosbrew/rawin-launcher/current/Launcher.qml"',
+    '        visible: !' + ROOT + '.cleanHomeStock',
+    '        onStatusChanged: {',
+    '            if (status === Loader.Error) ' + ROOT + '.cleanHomeStock = true;',
+    '        }',
+    '        onLoaded: {',
+    '            item.hostWindow = ' + ROOT + ';',
+    '            var props = null;',
+    '            try { props = systemProperties; } catch (e) {}',
+    '            if (props && props.isAppForeground !== undefined)',
+    '                ' + ROOT + '.cleanHomeForeground = Qt.binding(function() { return systemProperties.isAppForeground; });',
+    '            item.ready = props && props.isAppReadyToUse !== undefined',
+    '                ? Qt.binding(function() { return systemProperties.isAppReadyToUse; }) : true;',
+    '            item.foreground = Qt.binding(function() { return ' + ROOT + '.cleanHomeForeground && !' + ROOT + '.cleanHomeStock; });',
+    '        }',
+    '    }',
+    '    Connections {',
+    '        target: cleanHomeLoader.item',
+    '        ignoreUnknownSignals: true',
+    '        onStockRequested: {',
+    '            ' + ROOT + '.cleanHomeStock = true;',
+    '            try { uiController.currentMode = "main"; uiController.startApp(); } catch (e) {}',
+    '            uiController.forceActiveFocus();',
+    '        }',
+    '        onCloseRequested: { interfaces.application.closeApp(); }',
+    '    }',
+    '    Rectangle {',
+    '        z: 600',
+    '        visible: ' + ROOT + '.cleanHomeStock && ' + ROOT + '.cleanHomeForeground',
+    '        anchors.right: parent.right; anchors.rightMargin: 60; y: 45',
+    '        width: 450; height: 58; radius: 29; color: "#152d32"',
+    '        Text { anchors.centerIn: parent; text: "BLUE · back to Homebar"; color: "#8be2cb"; font.pixelSize: 22 }',
+    '        MouseArea { anchors.fill: parent; onClicked: { ' + ROOT + '.cleanHomeStock = false; if (cleanHomeLoader.item) cleanHomeLoader.item.forceActiveFocus(); } }',
+    '    }',
+    ''
+  ].join('\n');
 }
 
 var main = fs.readFileSync(path.join(dir, 'main.original.qml'), 'utf8');
@@ -75,32 +118,66 @@ if (main.indexOf('cleanHomeLoader') >= 0) {
   console.error('rawin-launcher: main.original.qml is already patched; restore the firmware file first');
   process.exit(1);
 }
-main = replaceOnce(main, 'import QtQuick 2.6', 'import QtQuick 2.6\nimport WebOS.Global 1.0', 'import');
-main = replaceOnce(main, '    //UI Controller', INJECTION + '\n    //UI Controller', 'UI Controller anchor');
-main = replaceOnce(main, '        id: uiController\n', [
-  '        id: uiController',
-  '        visible: rootWindow.cleanHomeStock || cleanHomeLoader.status !== Loader.Ready',
-  '        enabled: visible',
-  '        focus: rootWindow.cleanHomeStock',
-  ''
-].join('\n'), 'uiController');
-main = replaceOnce(main, '    function focusIn() {', '    function focusIn() {\n        rootWindow.cleanHomeStock = false;', 'focusIn');
-main = replaceOnce(main, '    function keyPressEvent(keyCode) {', [
-  '    function keyPressEvent(keyCode) {',
-  '        if (rootWindow.cleanHomeStock && keyCode === WebOS.Key_webOS_Blue) {',
-  '            rootWindow.cleanHomeStock=false;',
-  '            if (cleanHomeLoader.item) cleanHomeLoader.item.forceActiveFocus();',
-  '            return;',
-  '        }'
-].join('\n'), 'keyPressEvent');
+// What the panel reads from LG's Home: whether Home is in front, and the
+// window interface that closes it.
+['systemProperties.isAppForeground', 'interfaces.application'].forEach(function (name) {
+  if (main.indexOf(name) < 0) refuse('no ' + name);
+});
+// The root element and its id (rootWindow on the tested firmware).
+var rootAt = /^[A-Z]\w*\s*\{/m.exec(main);
+if (!rootAt) refuse('no root element');
+var rootId = /^[ \t]*id:[ \t]*(\w+)[ \t]*$/m.exec(main.slice(rootAt.index));
+if (!rootId) refuse('the root element has no id');
+var ROOT = rootId[1];
+if (ROOT !== 'rootWindow') notes.push('the root element is ' + ROOT + ' (rootWindow on the tested firmware)');
+
+main = replaceOnce(main, /^import QtQuick \d+\.\d+[ \t]*$/m, function (m) {
+  return m[0] + (/^import WebOS\.Global /m.test(main) ? '' : '\nimport WebOS.Global 1.0');
+}, 'the QtQuick import', true);
+// The panel goes in before LG's "//UI Controller" comment, or, without one,
+// right after the root element's id.
+if (once(main, /^[ \t]*\/\/ ?UI Controller[ \t]*$/m)) {
+  main = replaceOnce(main, /^[ \t]*\/\/ ?UI Controller[ \t]*$/m, function (m) { return injection(ROOT) + '\n' + m[0]; }, 'the UI Controller comment', true);
+} else {
+  main = replaceOnce(main, new RegExp('^[ \\t]*id:[ \\t]*' + ROOT + '[ \\t]*$', 'm'), function (m) { return m[0] + '\n' + injection(ROOT); }, 'the root id', true);
+  notes.push('no "//UI Controller" comment; the panel goes in after the root id');
+}
+// LG's own UI: shown only when asked for, or while the panel failed to load.
+main = replaceOnce(main, /^([ \t]*)id:[ \t]*uiController[ \t]*$/m, function (m) {
+  var ind = m[1];
+  return [m[0],
+    ind + 'visible: ' + ROOT + '.cleanHomeStock || cleanHomeLoader.status !== Loader.Ready',
+    ind + 'enabled: visible',
+    ind + 'focus: ' + ROOT + '.cleanHomeStock'].join('\n');
+}, 'the UI controller (id: uiController)', true);
+// Focus coming back to Home goes to the panel, not LG's ribbon.
+main = replaceOnce(main, /^([ \t]*)function focusIn\(\)[ \t]*\{/m, function (m) {
+  return m[0] + '\n' + m[1] + '    ' + ROOT + '.cleanHomeStock = false;';
+}, 'function focusIn()', false);
+// BLUE, while LG's ribbon is shown, brings the panel back.
+main = replaceOnce(main, /^([ \t]*)function keyPressEvent\((\w+)\)[ \t]*\{/m, function (m) {
+  var ind = m[1] + '    ', key = m[2];
+  return [m[0],
+    ind + 'if (' + ROOT + '.cleanHomeStock && ' + key + ' === WebOS.Key_webOS_Blue) {',
+    ind + '    ' + ROOT + '.cleanHomeStock = false;',
+    ind + '    if (cleanHomeLoader.item) cleanHomeLoader.item.forceActiveFocus();',
+    ind + '    return;',
+    ind + '}'].join('\n');
+}, 'function keyPressEvent(keyCode)', false);
 
 // LG's controller: hide, voice and the "Home shown" path only act while LG's
-// own ribbon is the visible UI.
+// own ribbon is the visible UI. Each piece is optional: a Home without it
+// keeps the panel, with LG's ribbon possibly reacting to that one thing.
 var ctrl = fs.readFileSync(path.join(dir, 'UIController.original.qml'), 'utf8');
-ctrl = replaceOnce(ctrl, 'if(root.isHiddenMode && state !== "hidden")', 'if(root.isHiddenMode && state !== "hidden" && rootWindow.cleanHomeStock)', 'hidden mode');
-ctrl = replaceOnce(ctrl, 'interfaces.voice.register();', 'if(rootWindow.cleanHomeStock) interfaces.voice.register();', 'voice');
-ctrl = replaceOnce(ctrl, 'if(homeShown) {', 'if(homeShown && rootWindow.cleanHomeStock) {', 'homeShown');
+ctrl = replaceOnce(ctrl, /if\(root\.isHiddenMode && state !== "hidden"\)/, 'if(root.isHiddenMode && state !== "hidden" && ' + ROOT + '.cleanHomeStock)', "LG's hidden mode", false);
+ctrl = replaceOnce(ctrl, /interfaces\.voice\.register\(\);/, 'if(' + ROOT + '.cleanHomeStock) interfaces.voice.register();', 'the voice registration', false);
+ctrl = replaceOnce(ctrl, /if\(homeShown\) \{/, 'if(homeShown && ' + ROOT + '.cleanHomeStock) {', 'the homeShown path', false);
 
+notes.forEach(function (n) { console.log('rawin-launcher: note: ' + n); });
+if (check) {
+  console.log('rawin-launcher: LG Home fits the panel' + (notes.length ? ' (with ' + notes.length + ' difference' + (notes.length > 1 ? 's' : '') + ' from the tested firmware)' : ''));
+  process.exit(0);
+}
 fs.writeFileSync(path.join(dir, 'main.qml'), main);
 fs.writeFileSync(path.join(dir, 'UIController.qml'), ctrl);
 console.log('rawin-launcher: LG Home patched');

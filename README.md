@@ -15,6 +15,9 @@ it.
   [eleven colour themes](docs/themes.md), the clock bar, the app name, and
   **updates** straight from this repository's releases.
 - LG's promotional apps are hidden from the lists; nothing is uninstalled.
+- **Any screen**: the panel scales to the TV's UI, HD (1280×720) as well as
+  FHD and UHD, and shows the inputs the TV has, two or four, with the
+  device on each.
 - **webOS 10:** LG's own Home never appears. A black stand-in takes its place,
   and the TV goes back to the last input (or a chosen HDMI) when an app exits
   or BACK is held.
@@ -23,16 +26,20 @@ it.
 
 ## Compatibility
 
-Tested on webOS 4.10 (LG C9, 2019) and webOS 10.3 (LG B4, 2024). Other webOS 4
-and 10 TVs may work; webOS 5–9 and 11 are untested and need
-`install.sh --try-webos10`. Details in [Compatibility](docs/compatibility.md).
+Tested on webOS 4.10 (LG C9, 2019) and webOS 10.3 (LG B4, 2024). On any other
+webOS the installer picks the variant the TV has the makings for: the panel
+inside LG's Home where Home is a QML app the patch fits (webOS 3 to 8 have
+that kind of Home), the overlay app elsewhere (webOS 9 and 11 have webOS 10's
+kind). `sh install.sh --probe` says which, and changes nothing. Details in
+[Compatibility](docs/compatibility.md).
 
 ## Install
 
 You need a rooted TV with the
 [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and a
-root shell (SSH or telnet), and on webOS 10 the **Input Hook** app from the
-Homebrew Channel. Log in to the TV as root, then:
+root shell (SSH or telnet), and for the overlay variant (webOS 10, or a Home
+that cannot take the panel) the **Input Hook** app from the Homebrew Channel.
+Log in to the TV as root, then:
 
 ```sh
 cd /tmp
@@ -49,8 +56,8 @@ folders on the TV keep that name, so earlier installs update in place, and the
 old GitHub address leads here.
 
 **Update:** *System → Launcher settings → Updates* (from 0.10.0 on).
-**Uninstall:** `sh /var/lib/webosbrew/rawin-launcher/uninstall.sh` (webOS 4) or
-`sh /var/lib/webosbrew/rawin-launcher-home/uninstall.sh` (webOS 10).
+**Uninstall:** `sh /var/lib/webosbrew/rawin-launcher/uninstall.sh` (Home panel)
+or `sh /var/lib/webosbrew/rawin-launcher-home/uninstall.sh` (overlay).
 
 ## Documentation
 

@@ -1,6 +1,7 @@
 #!/bin/sh
-# rawin-launcher installer for webOS 4 (LG Home QML panel). Run on the TV as
-# root, from the unpacked release: sh webos4/install.sh (or sh install.sh).
+# Homebar installer, the Home panel variant (the panel inside LG's QML Home;
+# webOS 4 tested). Run on the TV as root, from the unpacked release:
+# sh webos4/install.sh, or sh install.sh, which picks the variant.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 UI=$HERE/../ui
@@ -16,7 +17,7 @@ fail() { echo "rawin-launcher: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || fail "run this as root on the TV"
 [ -d /var/lib/webosbrew ] || fail "the Homebrew Channel (root) is not set up on this TV"
 command -v node >/dev/null || fail "node is missing on this TV"
-[ -f "$MAIN" ] && [ -f "$CTRL" ] || fail "LG Home QML not found: this is not a webOS 4 Home"
+[ -f "$MAIN" ] && [ -f "$CTRL" ] || fail "LG Home QML not found: this Home is not a QML app (the overlay may fit: sh install.sh --overlay)"
 
 # LG's original files: from the firmware, or from the previous install while
 # its mounts hide them.
@@ -29,7 +30,7 @@ else
     cp "$MAIN" "$TMP/main.original.qml"
     cp "$CTRL" "$TMP/UIController.original.qml"
 fi
-node "$HERE/patch-home.js" "$TMP" || fail "LG Home was not changed"
+node "$HERE/patch-home.js" "$TMP" || fail "LG Home was not changed (the overlay may fit instead: sh install.sh --overlay)"
 
 say "installing to $BASE"
 for f in "$MAIN" "$CTRL"; do
@@ -41,6 +42,9 @@ mkdir -p "$BASE/current/fonts"
 cp "$TMP/main.original.qml" "$TMP/UIController.original.qml" "$TMP/main.qml" "$TMP/UIController.qml" "$BASE/"
 cp "$UI/Launcher.qml" "$UI/FavouriteStore.qml" "$UI/Strings.js" "$UI/Themes.js" "$HERE/Config.js" "$BASE/current/"
 cp "$UI"/fonts/* "$BASE/current/fonts/"
+# The TV's webOS version, shown in the panel's corner with the variant.
+webos=$(sed -n 's/.*release \([0-9][0-9.]*\).*/\1/p' /etc/starfish-release 2>/dev/null | head -n 1)
+sed -i "s/^var webos = .*/var webos = \"$webos\";/" "$BASE/current/Config.js"
 cp "$HERE/apply.sh" "$HERE/uninstall.sh" "$HERE/../update.sh" "$HERE/../diagnose.sh" "$HERE/../VERSION" "$BASE/"
 chmod 755 "$BASE/apply.sh" "$BASE/uninstall.sh" "$BASE/update.sh"
 mkdir -p /var/lib/webosbrew/init.d

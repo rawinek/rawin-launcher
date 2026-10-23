@@ -2,12 +2,13 @@
 """Build a rawin-launcher release: dist/rawin-launcher.tar.gz.
 
 The archive unpacks to rawin-launcher/ (the version is in its VERSION file),
-so the same commands install any release. Its install.sh picks
-the variant for the TV's webOS:
-  webos4/   the panel inside LG Home (QML patch + boot hook), files from ui/
-  webos10/  org.rawin.launcher_<version>_all.ipk (overlay app + root helper),
-            LG Home stand-in, boot hook, Input Hook binding
-Both use the same panel, ui/Launcher.qml. For webOS 10 it becomes Panel.qml:
+so the same commands install any release. Its install.sh picks the variant
+the TV has the makings for:
+  webos4/   the Home panel: the panel inside LG's QML Home (patch + boot
+            hook), files from ui/
+  webos10/  the overlay: org.rawin.launcher_<version>_all.ipk (overlay app +
+            root helper), LG Home stand-in, boot hook, Input Hook binding
+Both use the same panel, ui/Launcher.qml. For the overlay it becomes Panel.qml:
 the Luna Service elements are swapped for webos10/panel-bridge.qml (HTTP to the
 helper) and fonts come from the package.
 
@@ -66,9 +67,11 @@ def replace_once(text, old, new):
 
 
 def config_js(spec, version, platform, extra=()):
-    """Config.js read by Launcher.qml (a QML JavaScript library)."""
+    """Config.js read by Launcher.qml (a QML JavaScript library). platform is
+    the variant's name for the panel's corner; webos, the TV's version, is
+    filled in there by the installer."""
     inputs = [{"id": "com.webos.app.hdmi%d" % i, "title": "HDMI %d" % i, "detail": "", "present": True} for i in range(1, 5)]
-    values = [("version", version), ("platform", platform), ("apps", []),
+    values = [("version", version), ("platform", platform), ("webos", ""), ("apps", []),
               ("favourites", spec["favourites"][:7]), ("styles", spec.get("styles", {})),
               ("inputs", inputs), ("excluded", spec.get("excluded", []) + [APP])] + list(extra)
     return (".pragma library\n" + "\n".join(
@@ -95,7 +98,7 @@ def webos10_ipk(spec, version):
     appinfo["version"] = package_version
     app_dir = "usr/palm/applications/%s/" % APP
     svc_dir = "usr/palm/services/%s/" % SERVICE
-    config = config_js(spec, version, "webOS 10", [("stockHome", False), ("exitTarget", True)])
+    config = config_js(spec, version, "overlay", [("stockHome", False), ("exitTarget", True)])
     files = [
         (app_dir + "appinfo.json", json.dumps(appinfo, indent=2).encode()),
         (app_dir + "main.qml", (ROOT / "webos10/app/main.qml").read_bytes()),
@@ -141,7 +144,7 @@ def release_files(spec, version):
     for name in ("install.sh", "uninstall.sh", "apply.sh"):
         files.append(("webos4/" + name, (ROOT / "webos4" / name).read_bytes(), exe))
     files.append(("webos4/patch-home.js", (ROOT / "webos4/patch-home.js").read_bytes()))
-    files.append(("webos4/Config.js", config_js(spec, version, "webOS 4")))
+    files.append(("webos4/Config.js", config_js(spec, version, "Home panel")))
     for name in ("install.sh", "uninstall.sh", "home-takeover.sh", "boot-hook.sh"):
         files.append(("webos10/" + name, (ROOT / "webos10" / name).read_bytes(), exe))
     files += [("webos10/home-stub/" + p.name, p.read_bytes()) for p in sorted((ROOT / "webos10/home-stub").iterdir())]

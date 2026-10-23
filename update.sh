@@ -1,8 +1,8 @@
 #!/bin/sh
 # rawin-launcher updater, started from the panel (System → Launcher settings →
-# Updates): as root through the Homebrew Channel's exec on webOS 4, by the
-# helper on webOS 10. The installer puts it next to the installed launcher,
-# with the VERSION file. Each step prints one line of JSON.
+# Updates): as root through the Homebrew Channel's exec for the Home panel,
+# by the helper for the overlay. The installer puts it next to the installed
+# launcher, with the VERSION file. Each step prints one line of JSON.
 #   update.sh check [stable|test]  the newest release on GitHub (test: pre-releases too)
 #   update.sh download             fetch the checked release, verify its SHA-256, unpack it
 #   update.sh install              run its install.sh in the background
@@ -74,21 +74,21 @@ download() {
 install() {
     pkg=$WORK/pkg/rawin-launcher
     [ -f "$pkg/install.sh" ] || fail "download the update first"
-    # Keep the install options. The webOS 10 variant (also when tried on another
-    # webOS with --try-webos10) leaves a marker when LG's Home was kept.
-    opts=
+    # Keep the variant and its options: the overlay leaves a marker when LG's
+    # Home was kept. Afterwards the launcher is opened again: for the Home
+    # panel that is LG Home (restarted by the installer), for the overlay the
+    # overlay app (closed by the package update).
     case "$HERE" in
         */rawin-launcher-home)
-            opts=--try-webos10
+            opts=--overlay
             if [ -f "$HERE/keep-lg-home" ]; then opts="$opts --keep-lg-home"
             else opts="$opts --replace-lg-home"; fi
+            app=org.rawin.launcher
             ;;
-    esac
-    # Open the launcher again afterwards: on webOS 4 it is LG Home (restarted by
-    # the installer), on webOS 10 the overlay app (closed by the package update).
-    case "$HERE" in
-        */rawin-launcher-home) app=org.rawin.launcher ;;
-        *) app=com.webos.app.home ;;
+        *)
+            opts=--home-panel
+            app=com.webos.app.home
+            ;;
     esac
     echo running >"$WORK/state"
     # Detached, in its own session: the installer replaces the launcher and, on

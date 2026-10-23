@@ -1,14 +1,16 @@
 # How it works
 
 Both variants show the same panel, `ui/Launcher.qml`; they differ in how it
-gets on screen and talks to the TV.
+gets on screen and talks to the TV. Which one a TV gets is in
+[Compatibility](compatibility.md#which-variant-a-tv-gets).
 
-- [webOS 4](#webos-4)
-- [webOS 10](#webos-10)
+- [The Home panel (webOS 4)](#the-home-panel-webos-4)
+- [The overlay (webOS 10)](#the-overlay-webos-10)
+- [The panel on any screen](#the-panel-on-any-screen)
 - [What it changes on the TV](#what-it-changes-on-the-tv)
 - [Names](#names)
 
-## webOS 4
+## The Home panel (webOS 4)
 
 LG's Home (`com.webos.app.home`) is a QML app. `webos4/patch-home.js` makes a
 copy of its `main.qml` with a `Loader` for the launcher panel on top of LG's UI,
@@ -19,7 +21,12 @@ memory) and restarts only the Home process. LG's window, lifecycle and HOME
 handling are kept; *System → Original Home* still opens LG's ribbon, and BLUE
 comes back.
 
-## webOS 10
+The patch finds its places in LG's files rather than counting on one
+firmware: the root element and its id, LG's UI controller and Home's
+foreground state must be there; the smaller pieces are patched where they
+match. Should the panel fail to load, LG's own UI shows as before.
+
+## The overlay (webOS 10)
 
 LG's Home is a Flutter app that cannot be extended, so the launcher is its own
 app:
@@ -34,23 +41,40 @@ app:
   and reads the TV language, and serves them to the panel over HTTP on
   `127.0.0.1:8899` (loopback only). It also watches the foreground: when an app
   exits or LG Home comes up uninvited it opens the last input (or the HDMI
-  chosen in the settings).
+  chosen in the settings). It is written for node 8 and later.
 - LG Home stand-in: a black web page with the id `com.webos.app.home`,
   bind-mounted over `/usr/palm/applications/com.webos.app.home` at every boot.
   The app manager is made to re-read Home with a block and release of that one
   app (the same approach [Glasshouse](https://github.com/rorygallagher2024/glasshouse)
-  uses for its own Home on webOS 10), then LG's Flutter Home is stopped. Anything
+  uses for its own Home on webOS 10), then LG's Home is stopped. Anything
   that opens Home (an app's exit, Netflix's BACK hold, a BACK hold on an
   input) gets the black page instead, and the helper switches to the input.
   Install with `--keep-lg-home` to skip this; *System → Original Home* then
-  opens LG's Home.
+  opens LG's Home. On an untested webOS the stand-in is skipped unless
+  `--replace-lg-home` asks for it.
+
+## The panel on any screen
+
+The panel is drawn for 1920×1080 and scales every length to the size it is
+given (`u` and `px()` in `Launcher.qml`): LG's UI runs at 1280×720 on HD
+TVs, and the overlay takes that size when the screen reports it. Positions
+hang from the bottom and the right edge, so a wider screen gets a longer
+rail and more columns in *Apps*. The Home rail gives the input pills what is
+left after the favourites and the two doors, and cuts the device names under
+*HDMI n* to that, so the rail never runs past the right margin; the TV's
+inputs come from the TV, as many as it has.
+
+Opening Home is kept cheap on a TV's GPU: the app and input lists are read
+again each time but only replace the old ones when they changed, so the tiles
+are not torn down and built again; the glow in the corner is drawn only where
+it reaches; the *Apps* grid builds only the rows on screen and the next one.
 
 ## What it changes on the TV
 
 Nothing on the read-only system partition is written. Everything below is
 removed by the [uninstaller](install.md#uninstall).
 
-webOS 4:
+Home panel:
 
 | What | Where |
 | :--- | :--- |
@@ -58,7 +82,7 @@ webOS 4:
 | Boot hook (bind mounts, CRIU snapshot hidden, Home restarted) | `/var/lib/webosbrew/init.d/76-rawin-launcher` |
 | Favourites and settings | LG Home's LocalStorage (database `rawinLauncher`) |
 
-webOS 10:
+Overlay:
 
 | What | Where |
 | :--- | :--- |
@@ -72,7 +96,7 @@ webOS 10:
 
 `773` is the HOME button of the tested Magic Remote as Input Hook reports it;
 for another remote see
-[Troubleshooting](troubleshooting.md#home-does-nothing-webos-10).
+[Troubleshooting](troubleshooting.md#home-does-nothing-overlay).
 
 ## Names
 
@@ -82,4 +106,6 @@ the release file `rawin-launcher.tar.gz`, the folders under
 LocalStorage database. So an update from any earlier version replaces the
 files in place and keeps favourites and settings, and the updaters already on
 TVs (which look for `rawin-launcher.tar.gz` at `rawinek/rawin-launcher`, now a
-redirect to `rawinek/webos-homebar`) keep finding new releases.
+redirect to `rawinek/webos-homebar`) keep finding new releases. The two
+variants were called "webOS 4" and "webOS 10" until 0.12.1, after the TVs
+they were made on; the installer's `--try-webos10` still means `--overlay`.

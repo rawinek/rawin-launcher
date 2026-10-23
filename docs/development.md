@@ -3,6 +3,7 @@
 - [Build from source](#build-from-source)
 - [Configuration](#configuration)
 - [Layout](#layout)
+- [Checking the layout](#checking-the-layout)
 - [Adding a language](#adding-a-language)
 - [Adding a theme](#adding-a-theme)
 - [Theme pictures](#theme-pictures)
@@ -36,14 +37,36 @@ both variants; on the TV `install.sh` picks the one for its webOS.
 | Path | What |
 | :--- | :--- |
 | `ui/` | The panel shared by both variants: `Launcher.qml`, texts in `Strings.js`, colours in `Themes.js`, LocalStorage in `FavouriteStore.qml`, fonts |
-| `webos4/` | The LG Home patch, boot hook and scripts |
-| `webos10/` | The overlay app, helper, HTTP bridge, Home stand-in and scripts |
-| `tools/` | Build, deploy, the app icon (`make-icon.py`) and the theme pictures (`render-themes.py`) |
+| `webos4/` | The Home panel: the LG Home patch, boot hook and scripts |
+| `webos10/` | The overlay: the overlay app, helper, HTTP bridge, Home stand-in and scripts |
+| `tools/` | Build, deploy, the app icon (`make-icon.py`), the theme pictures (`render-themes.py`) and the panel at any size (`render-panel.py`) |
 | `config/` | Build defaults, see [Configuration](#configuration) |
 
-For webOS 10, `tools/build.py` turns `ui/Launcher.qml` into the app's
+For the overlay, `tools/build.py` turns `ui/Launcher.qml` into the app's
 `Panel.qml`, swapping its Luna Service elements for
-`webos10/panel-bridge.qml` (HTTP to the helper).
+`webos10/panel-bridge.qml` (HTTP to the helper). The top-level `install.sh`
+picks the variant by what the TV has, see
+[Compatibility](compatibility.md#which-variant-a-tv-gets).
+
+## Checking the layout
+
+The panel is drawn for 1920×1080 and scaled to the size it gets: `u` in
+`Launcher.qml` is that scale and every length goes through `px()`, so a new
+element is placed in 1080p numbers (`shell.px(24)`) and follows the screen.
+Positions hang from the bottom and the right edge (`shell.height - px(…)`,
+`anchors.right`), never from the top left, so a wider screen gets more rail
+and more columns. `tools/render-panel.py` draws a set of scenes (Home with
+seven favourites and long HDMI-CEC names, a favourite focused, Apps, System,
+the settings, no favourites, two inputs) at a size:
+
+```sh
+python3 -m pip install PySide6
+python3 tools/render-panel.py                     # dist/render/1920x1080-*.png
+python3 tools/render-panel.py --size 1280x720     # an HD TV
+python3 tools/render-panel.py --size 2560x1080    # a wider screen
+```
+
+Check at least 1920×1080 and 1280×720 after a change to the panel.
 
 ## Adding a language
 

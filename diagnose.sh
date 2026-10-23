@@ -21,10 +21,19 @@ version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || ec
     section "TV"
     show /etc/starfish-release
     luna luna://com.webos.service.tv.systemproperty/getSystemInfo '{"keys":["modelName","firmwareVersion","sdkVersion"]}'
+    luna luna://com.webos.service.tv.systemproperty/getSystemInfo '{"keys":["UHD"]}'
+    echo "framebuffer: $(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null || echo unknown)"
     echo "node: $(node -v 2>&1)"
     echo "qml-runner: $(command -v qml-runner || echo missing)"
     echo "Homebrew Channel: $(version_of $APPS/org.webosbrew.hbchannel)"
     echo "Input Hook: $(version_of $APPS/org.webosbrew.inputhook)"
+
+    # Which variant fits this TV, from the release's installer (not installed
+    # with the launcher; present when run from the unpacked release).
+    section "Variants (install.sh --probe)"
+    HERE=$(cd "$(dirname "$0")" && pwd)
+    if [ -f "$HERE/install.sh" ] && [ -f "$HERE/webos4/patch-home.js" ]; then sh "$HERE/install.sh" --probe 2>&1
+    else echo "(run from the unpacked release for this)"; fi
 
     section "rawin-launcher"
     for d in /var/lib/webosbrew/rawin-launcher /var/lib/webosbrew/rawin-launcher-home; do
@@ -35,6 +44,7 @@ version_of() { grep -o '"version": *"[^"]*"' "$1/appinfo.json" 2>/dev/null || ec
 
     section "LG Home"
     luna luna://com.webos.applicationManager/getAppInfo '{"id":"com.webos.app.home"}' | grep -o -E '"(type|version|main)": *"[^"]*"'
+    echo "Home QML: $(ls /usr/palm/applications/com.webos.app.home/qml/main.qml 2>/dev/null || echo none)"
     [ -f /var/lib/webosbrew/rawin-launcher-home/takeover.sh ] && sh /var/lib/webosbrew/rawin-launcher-home/takeover.sh status
     grep -F com.webos.app.home /proc/mounts
 

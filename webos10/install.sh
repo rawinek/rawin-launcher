@@ -1,13 +1,16 @@
 #!/bin/sh
-# rawin-launcher installer for webOS 10 (overlay panel + root helper). Run on
-# the TV as root, from the unpacked release: sh webos10/install.sh (or sh install.sh).
-#   --keep-lg-home   leave LG's Home in place (no black stand-in); without the
-#                    stand-in LG Home may show briefly when an app exits
+# Homebar installer, the overlay variant (an overlay app with a root helper;
+# webOS 10 tested). Run on the TV as root, from the unpacked release:
+# sh webos10/install.sh, or sh install.sh, which picks the variant.
+#   --keep-lg-home     leave LG's Home in place (no black stand-in); without the
+#                      stand-in LG Home may show briefly when an app exits
+#   --replace-lg-home  the stand-in in LG Home's place (the default here)
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 UI=$HERE/../ui
 APP=org.rawin.launcher
 SERVICE=$APP.service
+APPDIR=/media/developer/apps/usr/palm/applications/$APP
 HBC=/media/developer/apps/usr/palm/services/org.webosbrew.hbchannel.service
 BASE=/var/lib/webosbrew/rawin-launcher-home
 HOOK=/var/lib/webosbrew/init.d/77-rawin-launcher
@@ -18,6 +21,7 @@ KEEP_LG_HOME=
 for a in "$@"; do
     case "$a" in
         --keep-lg-home) KEEP_LG_HOME=1 ;;
+        --replace-lg-home) KEEP_LG_HOME= ;;
         *) echo "unknown option: $a" >&2; exit 2 ;;
     esac
 done
@@ -30,6 +34,9 @@ luna() { luna-send -n 1 "$1" "$2" </dev/null 2>/dev/null; }
 [ -x "$HBC/elevate-service" ] || fail "the Homebrew Channel (root) is not set up on this TV"
 [ -d /media/developer/apps/usr/palm/applications/org.webosbrew.inputhook ] ||
     fail "install 'Input Hook' from the Homebrew Channel first: it sends the HOME button to the launcher"
+command -v node >/dev/null || fail "node is missing on this TV"
+node -e 'process.exit(parseInt(process.versions.node, 10) >= 8 ? 0 : 1)' 2>/dev/null ||
+    fail "the helper needs node 8 or newer; this TV has node $(node -v 2>/dev/null) (the Home panel may fit instead: sh install.sh --home-panel)"
 IPK=$(ls "$HERE"/org.rawin.launcher_*_all.ipk 2>/dev/null | head -n 1)
 [ -n "$IPK" ] || fail "no org.rawin.launcher IPK next to this script"
 
@@ -47,6 +54,9 @@ until tr -d ' ' <"$LOG" | grep -q '"state":"installed"'; do
 done
 kill $PID 2>/dev/null || true
 rm -f /tmp/rawin-launcher.ipk "$LOG"
+# The TV's webOS version, shown in the panel's corner with the variant.
+webos=$(sed -n 's/.*release \([0-9][0-9.]*\).*/\1/p' /etc/starfish-release 2>/dev/null | head -n 1)
+[ -f "$APPDIR/Config.js" ] && sed -i "s/^var webos = .*/var webos = \"$webos\";/" "$APPDIR/Config.js"
 
 say "giving the helper root (Homebrew elevate-service)"
 "$HBC/elevate-service" "$SERVICE" >/dev/null 2>&1 || fail "elevate-service failed"

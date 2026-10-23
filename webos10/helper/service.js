@@ -1,13 +1,18 @@
-// rawin-launcher helper for webOS 10. Elevated with Homebrew's
-// elevate-service, it makes the calls a developer app is denied (app inventory,
-// inputs, what is on screen, launching) and serves them over HTTP on 127.0.0.1,
-// because WebOSServices.Service gives a developer QML app no answers on webOS 10.
+// rawin-launcher helper for the overlay variant (webOS 10, and other webOS
+// versions tried with it). Elevated with Homebrew's elevate-service, it makes
+// the calls a developer app is denied (app inventory, inputs, what is on
+// screen, launching) and serves them over HTTP on 127.0.0.1, because
+// WebOSServices.Service gives a developer QML app no answers on webOS 10.
 // Icons are copied once into the app's cache/ folder and served from there.
+// Written for node 8 and later (webOS 5 and later ship it; webOS 3 and 4 have
+// node 0.12, which is why they get the Home panel instead): no URL class, no
+// recursive mkdir, no optional chaining.
 const Service = require('webos-service');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const urlModule = require('url');
 const { AfterExit, cardOf } = require('./after-exit');
 
 const APP = 'org.rawin.launcher';
@@ -15,6 +20,8 @@ const APP_DIR = '/media/developer/apps/usr/palm/applications/' + APP;
 const CACHE = APP_DIR + '/cache';
 const ICON_ROOTS = ['/usr/palm/', '/media/cryptofs/apps/', '/media/developer/apps/', '/mnt/lg/'];
 const HTTP_PORT = 8899;
+// What the panel may open besides the apps it listed: the inputs and LG's Home.
+const SYSTEM_IDS = /^com\.webos\.app\.(hdmi\d|dp\d|usbc\d|home)$/;
 
 const service = new Service(APP + '.service');
 
@@ -35,8 +42,8 @@ function cachedIcon(id, file) {
     let fresh = false;
     try { const dst = fs.statSync(target); fresh = dst.size === src.size && dst.mtimeMs >= src.mtimeMs; } catch (e) {}
     if (!fresh) {
-      fs.mkdirSync(CACHE, { recursive: true });
-      fs.copyFileSync(real, target);
+      try { fs.mkdirSync(CACHE); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+      fs.writeFileSync(target, fs.readFileSync(real));
       fs.chmodSync(target, 0o644);
     }
     return 'cache/' + name;
@@ -84,10 +91,11 @@ function send(res, code, body, type) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://127.0.0.1');
+  const url = urlModule.parse(req.url || '/', true);
+  const query = url.query || {};
   try {
     if (url.pathname === '/ping') {
-      return send(res, 200, { ok: true, pid: process.pid, rss: process.memoryUsage().rss });
+      return send(res, 200, { ok: true, pid: process.pid, rss: process.memoryUsage().rss, node: process.versions.node });
     }
     if (url.pathname === '/apps') {
       const inv = await inventory();
@@ -113,10 +121,10 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, await luna('luna://com.webos.applicationManager/getForegroundAppInfo', { extraInfo: true }));
     }
     if (url.pathname === '/launch') {
-      // Only launch points we listed, plus HDMI inputs and LG's own Home.
-      const id = url.searchParams.get('id') || '';
+      // Only launch points we listed, plus the inputs and LG's own Home.
+      const id = String(query.id || '');
       if (!known.size) { const inv = await inventory(); if (inv.apps) known = new Set(inv.apps.map((a) => a.id)); }
-      if (!known.has(id) && !/^com\.webos\.app\.(hdmi[1-4]|home)$/.test(id)) return send(res, 403, { returnValue: false, errorText: 'unknown id' });
+      if (!known.has(id) && !SYSTEM_IDS.test(id)) return send(res, 403, { returnValue: false, errorText: 'unknown id' });
       if (id === 'com.webos.app.home') returner.noteHomeRequest();
       return send(res, 200, await luna('luna://com.webos.applicationManager/launch', { id }));
     }
@@ -131,16 +139,16 @@ const server = http.createServer(async (req, res) => {
     }
     // Where to go after an app exits or LG Home shows up: "last" or an input.
     if (url.pathname === '/exit-target') {
-      const id = url.searchParams.get('id') || 'last';
+      const id = String(query.id || 'last');
       returner.setTarget(id);
       saveSettings({ exitTo: returner.target || 'last' });
       return send(res, 200, { returnValue: true, exitTo: returner.target || 'last' });
     }
     // Updates: update.sh next to the installed launcher (check, download, install, status).
     if (url.pathname === '/update') {
-      const step = url.searchParams.get('step') || '';
+      const step = String(query.step || '');
       if (!['check', 'download', 'install', 'status'].includes(step)) return send(res, 400, { ok: false, error: 'unknown step' });
-      const channel = url.searchParams.get('channel') === 'test' ? 'test' : 'stable';
+      const channel = query.channel === 'test' ? 'test' : 'stable';
       return send(res, 200, await updateStep(step, channel));
     }
     if (url.pathname.startsWith('/cache/')) {
