@@ -14,9 +14,6 @@
 HOME on the remote opens the panel over whatever is on screen; the picture
 stays visible above it. One row, from the left:
 
-- **Recent apps**, when turned on (*Launcher settings → Recent apps on
-  Home*): the last two or three apps opened from here that are not
-  favourites, before a thin divider. Hold OK on one to make it a favourite.
 - **Favourites**: up to seven apps. With none yet, an *Add favourites* tile
   opens *Apps*.
 - **Sources**: *TV* (Live TV) when turned on in the settings, then the TV's
@@ -46,7 +43,7 @@ Favourites are chosen on the TV:
 - In *Apps*, **hold OK** (or press YELLOW) on an app to add it, up to seven.
   A favourite is marked with a dot; holding OK on it again removes it.
 - On Home, **hold OK** on a favourite to edit it: ← → move it, ▼ removes it,
-  OK, BACK or ▲ finish. Hold OK on a recent app to make it a favourite.
+  OK, BACK or ▲ finish.
 
 A fresh install starts with none. Favourites outlast updates; an app that is
 uninstalled simply drops out of them.
@@ -85,34 +82,36 @@ overlay) are in the bottom-right corner.
 
 ## Launcher settings
 
-OK on a setting opens its values as a row of pills: ← → move along them, and
-each one applies at once, so the row is the preview; OK or BACK keeps the
-value and goes back to the settings. The row of settings scrolls sideways
-with the focus. *Updates*, *Back up* and *Restore* act on OK.
+*System → Launcher settings* opens a menu over most of the screen. On the
+left are the settings in groups, each with its value; on the right the
+values of the focused one, with a dot on the chosen value. ▲ ▼ move between
+the settings; OK or ▶ goes into the values, where ▲ ▼ choose (each value
+applies at once, so the menu itself is the preview) and OK or ◀ come back;
+BACK closes the menu. *Back up*, *Restore* and *Updates* show their status
+on the right and act on OK.
 
-| Setting | Values |
-| :--- | :--- |
-| Language | *System language* (the TV's menu language, when it is one of the [languages](#languages)), or one of them by hand |
-| Theme | Default or one of ten two-colour themes, see [Themes](themes.md) |
-| Text size | Normal, Large or Larger: the names, hints and labels grow; the tiles and pills keep their size, so the row still fits |
-| Animations | On or off |
-| Apps order | The TV's order, A to Z, or the most used first |
-| Recent apps on Home | Off, 2 or 3 |
-| Live TV on Home | A *TV* pill before the inputs, shown or hidden |
-| Hidden apps and inputs | Hidden, or shown dimmed (to bring one back with RED) |
-| After holding BACK | Overlay only: the last input, or one of the TV's inputs. Also where the TV goes when an app exits |
-| Clock bar | Shown or hidden |
-| App name | Whether the big name of the focused item shows on Home and in *Apps* (System and the settings always show it) |
-| Back up favourites and settings | OK writes everything the launcher keeps to a file next to it; the value says when the last backup was made, see [Backup](#backup) |
-| Restore from the backup | OK brings that file back |
-| Updates | The installed version; OK checks, downloads and installs a new release, see [Update](install.md#update). The launcher also looks once a day, the first time Home opens, and shows a dot on *System* and *Launcher settings* when a new version is there |
-| Test builds | Also offer pre-releases as updates |
+| Group | Setting | Values |
+| :--- | :--- | :--- |
+| Look | Language | *System language* (the TV's menu language, when it is one of the [languages](#languages)), or one of them by hand |
+| | Theme | Default or one of ten two-colour themes, see [Themes](themes.md) |
+| | Text size | Normal, Large or Larger: the names, hints, labels and the menu grow; the tiles and pills keep their size, so the row still fits |
+| | Animations | On or off |
+| Home row | Live TV on Home | A *TV* pill before the inputs, shown or hidden |
+| | Hidden apps and inputs | Hidden, or shown dimmed (to bring one back with RED) |
+| | After holding BACK | Overlay only: the last input, or one of the TV's inputs. Also where the TV goes when an app exits |
+| Apps | Apps order | The TV's order, A to Z, or the most used first |
+| On screen | Clock bar | Shown or hidden |
+| | App name | Whether the big name of the focused item shows on Home and in *Apps* (System always shows it) |
+| Backup | Back up favourites and settings | OK writes everything the launcher keeps to a file next to it; the status says when the last backup was made, see [Backup](#backup) |
+| | Restore from the backup | OK brings that file back |
+| Updates | Updates | The installed version; OK checks, downloads and installs a new release, see [Update](install.md#update). The launcher also looks once a day, the first time Home opens, and shows a dot on *System* and *Launcher settings* when a new version is there |
+| | Test builds | Also offer pre-releases as updates |
 
 ## Backup
 
 *Back up favourites and settings* writes the favourites, the settings, the
-hidden apps and inputs, the launch counts and the recent apps to
-`backup.json` next to the installed launcher:
+hidden apps and inputs and the launch counts to `backup.json` next to the
+installed launcher:
 `/var/lib/webosbrew/rawin-launcher/backup.json` (Home panel) or
 `/var/lib/webosbrew/rawin-launcher-home/backup.json` (overlay). *Restore
 from the backup* brings it back; the file outlasts updates, and the

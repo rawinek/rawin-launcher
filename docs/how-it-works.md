@@ -84,11 +84,17 @@ is read again.
 Everything the launcher remembers is in its LocalStorage database
 (`rawinLauncher`): `favourites` (app ids), `settings`, `hidden` and
 `hiddenInputs` (ids hidden with RED), `usage` (how often each app was opened
-from here, for the "most used" order), `recent` (the last ten opened) and
-`colors` (the glow colours read from icons). *Back up* writes the first six
-to `backup.json` next to the installed launcher: with the Home panel through
-the Homebrew Channel's `exec` (the JSON in a `printf`), with the overlay
-through the helper (`POST /backup`, `GET /restore`).
+from here, for the "most used" order) and `colors` (the glow colours read
+from icons). *Back up* writes the first five to `backup.json` next to the
+installed launcher: with the Home panel through the Homebrew Channel's
+`exec` (the JSON in a `printf`), with the overlay through the helper
+(`POST /backup`, `GET /restore`).
+
+The settings menu is drawn by the panel itself (no Qt Quick Controls, which
+the TVs' Qt does not have in one shape): a card in the theme's tile colour,
+a scrolling column of rows on the left, the focused setting's values on the
+right; the positions of the rows are added up from their heights rather
+than read from the column, which places them only a frame later.
 
 ## What it changes on the TV
 

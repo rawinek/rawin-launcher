@@ -11,7 +11,7 @@ FocusScope {
     property var hostWindow
     property bool ready: false
     property bool foreground: false
-    // home, apps, system, settings, or value: the values of one setting.
+    // home, apps, system, or settings: the launcher settings menu.
     property string page: "home"
     property int selected: 0
     property bool launching: false
@@ -34,20 +34,14 @@ FocusScope {
     // them dimmed, so they can be shown again.
     property var hiddenIds: []
     property var hiddenInputs: []
-    // How often each app was opened from here ("usage") and the last ten
-    // opened ("recent"): the Apps order "most used" and the recent tiles.
+    // How often each app was opened from here ("usage"): the Apps order "most used".
     property var usage: ({})
-    property var recentIds: []
     // The glow colour read from each app's icon ("colors": {id: {icon, accent}}),
     // for the apps the build has no colour for. See glowReader.
     property var iconColors: ({})
     // Apps as the Apps page shows them: without the hidden ones unless asked,
     // in the TV's order, A to Z or most used first.
     readonly property var apps: appsFor(applications, hiddenIds, settings.sort, settings.showHidden)
-    // Recently opened apps at the start of the rail: not favourites, not hidden.
-    readonly property var recents: recentsFor(recentIds, applications, favouriteKeys, hiddenIds, settings.recent)
-    readonly property int recentCount: recents.length
-    readonly property int headSlots: recentCount + favSlots
     property int editIndex: -1
     property string notice: ""
     property bool okHeld: false
@@ -66,11 +60,11 @@ FocusScope {
     // Launcher settings, saved with the favourites (key "settings").
     // lang: "system" or a code from Strings.languages; theme: an id from
     // Themes.ids; size: the text size; motion: animations; sort: the Apps
-    // order; recent: how many recent apps on the rail (0, 2, 3); tv: a Live
-    // TV source on the rail; showHidden: hidden apps and inputs shown dimmed;
-    // exitTo (overlay only, sent to the helper): "last" or an input app id;
-    // clock: the top bar; title: the big name of the focused app on Home and
-    // Apps; beta: updates also offer test builds (GitHub pre-releases).
+    // order; tv: a Live TV source on the rail; showHidden: hidden apps and
+    // inputs shown dimmed; exitTo (overlay only, sent to the helper): "last"
+    // or an input app id; clock: the top bar; title: the big name of the
+    // focused app on Home and Apps; beta: updates also offer test builds
+    // (GitHub pre-releases).
     property var settings: validSettings({})
     property string systemLang: ""
     // The updater (Launcher settings → Updates): idle, checking, current,
@@ -86,13 +80,19 @@ FocusScope {
     // overlay only when it was kept (the helper says so, see panel-bridge.qml).
     property bool stockHomeAvailable: Config.stockHome !== false
     readonly property var tools: toolsFor(lang, applications, stockHomeAvailable)
-    readonly property var settingsItems: settingsFor(lang, settings, systemLang, updateInfo, backupInfo)
-    // The values page: the setting it is for (its key and its place on the
-    // settings rail) and its values, as pills. The list does not depend on
-    // the settings themselves, so choosing a value does not rebuild it.
-    property string valueKey: ""
-    property int settingIndex: 0
-    readonly property var valueOptions: page === "value" ? optionsFor(valueKey, lang, inputs) : []
+    // The settings menu: the settings in groups, each a key; the rows the
+    // menu shows (a group's name, then its settings); the focused one's
+    // values. pane 0 is the list of settings, pane 1 their values. The
+    // keys and the values do not depend on the settings themselves, so
+    // choosing a value does not rebuild the menu around it.
+    readonly property var settingGroups: groupsFor(Config.exitTarget)
+    readonly property var settingKeys: keysOf(settingGroups)
+    readonly property var menuRows: rowsOf(settingGroups, lang)
+    readonly property var settingsItems: settingKeys.map(function(k) { return settingFor(k); })
+    property int pane: 0
+    property int valueIndex: 0
+    readonly property string valueKey: page === "settings" && selected < settingKeys.length ? settingKeys[selected] : ""
+    readonly property var valueOptions: valueKey ? optionsFor(valueKey, lang, inputs) : []
     // In place of the favourites while there are none: OK opens Apps.
     readonly property var addFavouritesTile: ({title: t("add_favs_title"), action: "apps", symbol: "add"})
     signal stockRequested()
@@ -131,27 +131,35 @@ FocusScope {
     readonly property int gap: px(24)
     readonly property int appColumns: Math.max(4, Math.floor((width - 2*margin + gap) / (tile + gap)))
     readonly property int railY: height - px(192)
-    // The Home rail: recent apps, favourites, the source pills, the two
-    // doors. The pills get what is left of the width; the device name under
-    // "HDMI n" is cut to that, down to a floor, so the rail never runs past
-    // the right margin.
+    // The Home rail: favourites, the source pills, the two doors. The pills
+    // get what is left of the width; the device name under "HDMI n" is cut
+    // to that, down to a floor, so the rail never runs past the right margin.
     readonly property int railGroupGap: px(32)
-    readonly property int appsWidth: headSlots > 0 ? headSlots*(tile + gap) - gap + (recentCount > 0 && favSlots > 0 ? 1 + gap : 0) : 0
+    readonly property int favsWidth: favSlots > 0 ? favSlots*(tile + gap) - gap : 0
     readonly property int doorsWidth: 2*px(64) + px(12)
-    readonly property int pillRoom: width - 2*margin - appsWidth - doorsWidth - railGroupGap*(headSlots > 0 ? 2 : 1) - px(12)*Math.max(0, sourceCount - 1)
+    readonly property int pillRoom: width - 2*margin - favsWidth - doorsWidth - railGroupGap*(favSlots > 0 ? 2 : 1) - px(12)*Math.max(0, sourceCount - 1)
     readonly property int pillTextCap: Math.max(px(64), Math.min(px(180), Math.floor(pillRoom / Math.max(1, sourceCount)) - px(44)))
-    // The name sits just above the tiles; a line under it (a setting's value,
-    // editing help, a message) lifts it by one line.
-    // Without the name (setting "title", Home and Apps only) a line under it
-    // still shows, just above the tiles.
-    readonly property bool showTitle: settings.title !== false || page === "system" || page === "settings" || page === "value"
+    // The name sits just above the tiles; a line under it (editing help, a
+    // message) lifts it by one line. Without the name (setting "title",
+    // Home and Apps only) a line under it still shows, just above the tiles.
+    readonly property bool showTitle: settings.title !== false || page === "system"
     readonly property int heroBaseline: height - (page === "apps" ? px(380) : px(238)) - (showTitle ? (hero.sub ? pt(36) : 0) : px(20))
-    readonly property var hero: heroFor(page, selected, apps, favourites, editIndex, launching, message, notice, settingsItems, tools, recents, sources, valueOptions, iconColors)
-    readonly property var hints: hintsFor(page, selected, favouriteKeys, editIndex, lang, updateInfo)
+    readonly property var hero: heroFor(page, selected, apps, favourites, editIndex, launching, message, notice, tools, sources, iconColors)
+    readonly property var hints: hintsFor(page, selected, favouriteKeys, editIndex, lang, updateInfo, pane)
     property color glowColor: hero.color
     Behavior on glowColor { ColorAnimation { duration: shell.dur(300) } }
 
     function closeHome() { closeRequested(); }
+    // Whether the pointer really moved: Qt sends a hover to whatever appears
+    // under a pointer that stays where it is (a menu opening under it), and
+    // the menu must not pick a row, let alone a value, from that.
+    property point pointerAt: Qt.point(-1, -1)
+    function pointerMoved(item, mouse) {
+        var p = item.mapToItem(null, mouse.x, mouse.y), first = pointerAt.x < 0;
+        var moved = !first && (Math.abs(p.x - pointerAt.x) > 2 || Math.abs(p.y - pointerAt.y) > 2);
+        pointerAt = Qt.point(p.x, p.y);
+        return moved;
+    }
 
     FontLoader { id: inter; source: "file:///var/lib/webosbrew/rawin-launcher/current/fonts/Inter-Regular.ttf" }
     FontLoader { id: interBold; source: "file:///var/lib/webosbrew/rawin-launcher/current/fonts/Inter-Bold.ttf" }
@@ -185,11 +193,54 @@ FocusScope {
             return !(x.optional && !installed(x.id, apps)) && !(x.stock && !stockHome);
         });
     }
+    // The settings menu's groups: a name and the settings in it. The BACK-hold
+    // target is the overlay's alone.
+    function groupsFor(exitTarget) {
+        return [
+            {title: "grp_look", keys: ["lang", "theme", "size", "motion"]},
+            {title: "grp_home", keys: exitTarget ? ["tv", "showHidden", "exitTo"] : ["tv", "showHidden"]},
+            {title: "grp_apps", keys: ["sort"]},
+            {title: "grp_screen", keys: ["clock", "title"]},
+            {title: "grp_backup", keys: ["backup", "restore"]},
+            {title: "grp_updates", keys: ["update", "beta"]}
+        ];
+    }
+    function keysOf(groups) {
+        var out = [];
+        for (var i=0; i<groups.length; i++) out = out.concat(groups[i].keys);
+        return out;
+    }
+    // The menu's rows: {header: name} before each group, {key, index} for
+    // each setting; index counts the settings alone, as selected does.
+    function rowsOf(groups, language) {
+        var out = [], n = 0;
+        for (var i=0; i<groups.length; i++) {
+            out.push({header: t(groups[i].title)});
+            for (var j=0; j<groups[i].keys.length; j++) out.push({key: groups[i].keys[j], index: n++});
+        }
+        return out;
+    }
+    // One setting as the menu shows it: its name, its value's name (or an
+    // action's status), and what OK does with it.
+    function settingFor(key) {
+        var names = {lang: "set_language", theme: "set_theme", size: "set_size", motion: "set_motion", sort: "set_sort", tv: "set_tv",
+                     showHidden: "set_hidden", exitTo: "set_exit", clock: "set_clock", title: "set_title", backup: "set_backup",
+                     restore: "set_restore", update: "set_update", beta: "set_beta"};
+        var item = {key: key, title: t(names[key]), action: "setting", value: ""};
+        if (key === "backup" || key === "restore") {
+            item.action = key;
+            item.value = backupInfo.saved ? Strings.format(t("bak_saved"), {date: Qt.formatDateTime(new Date(backupInfo.saved), "yyyy-MM-dd hh:mm")}) : t("bak_none");
+        } else if (key === "update") {
+            item.action = "update";
+            item.value = updateText(updateInfo);
+        } else item.value = valueTitle(key);
+        return item;
+    }
     function inputTitle(id) {
         for (var i=0; i<allInputs.length; i++) if (allInputs[i].id === id) return allInputs[i].title;
         return "HDMI " + id.slice(-1);
     }
-    // The values of a setting, in the order the values page shows them.
+    // The values of a setting, in the order the menu shows them.
     function optionsFor(key, language, inputList) {
         var list = [], i;
         if (key === "lang") {
@@ -201,8 +252,6 @@ FocusScope {
             list = [{id: "normal", title: t("val_size_normal")}, {id: "large", title: t("val_size_large")}, {id: "larger", title: t("val_size_larger")}];
         } else if (key === "sort") {
             list = [{id: "lg", title: t("val_sort_lg")}, {id: "az", title: t("val_sort_az")}, {id: "used", title: t("val_sort_used")}];
-        } else if (key === "recent") {
-            list = [{id: 0, title: t("val_off")}, {id: 2, title: "2"}, {id: 3, title: "3"}];
         } else if (key === "showHidden") {
             list = [{id: false, title: t("val_hidden_hide")}, {id: true, title: t("val_hidden_show")}];
         } else if (key === "exitTo") {
@@ -215,29 +264,12 @@ FocusScope {
         } else if (key === "motion" || key === "beta") {
             list = [{id: true, title: t("val_on")}, {id: false, title: t("val_off")}];
         }
-        for (i=0; i<list.length; i++) list[i].kind = "value";
         return list;
     }
     function valueTitle(key) {
         var o = optionsFor(key, lang, inputs);
         for (var i=0; i<o.length; i++) if (o[i].id === settings[key]) return o[i].title;
         return "";
-    }
-    function settingsFor(language, s, sysLang, upd, bak) {
-        var list = [], keys = [
-            ["lang", "set_language", "language"], ["theme", "set_theme", "theme"], ["size", "set_size", "size"],
-            ["motion", "set_motion", "motion"], ["sort", "set_sort", "sort"], ["recent", "set_recent", "reset"],
-            ["tv", "set_tv", "tv"], ["showHidden", "set_hidden", "eye"]];
-        if (Config.exitTarget) keys.push(["exitTo", "set_exit", "exit"]);
-        keys.push(["clock", "set_clock", "clock"], ["title", "set_title", "title"]);
-        for (var i=0; i<keys.length; i++)
-            list.push({key: keys[i][0], title: t(keys[i][1]), value: valueTitle(keys[i][0]), symbol: keys[i][2], action: "setting"});
-        var saved = bak.saved ? Strings.format(t("bak_saved"), {date: bak.saved.slice(0, 16).replace("T", " ")}) : t("bak_none");
-        list.push({key: "backup", title: t("set_backup"), value: saved, symbol: "update", action: "backup"});
-        list.push({key: "restore", title: t("set_restore"), value: saved, symbol: "restore", action: "restore"});
-        list.push({key: "update", title: t("set_update"), value: updateText(upd), symbol: "download", action: "update"});
-        list.push({key: "beta", title: t("set_beta"), value: valueTitle("beta"), symbol: "flask", action: "setting"});
-        return list;
     }
     function updateText(u) {
         var v = {version: u.latest};
@@ -250,6 +282,17 @@ FocusScope {
         if (u.state === "done") return t("upd_done");
         if (u.state === "failed") return t(u.failed);
         return Strings.format(t("upd_idle"), {version: Config.version});
+    }
+    // What OK does on an action row: the verb for the hint, or nothing yet.
+    function actionVerb(key) {
+        if (key === "backup") return t("hint_backup");
+        if (key === "restore") return backupInfo.saved ? t("hint_restore") : "";
+        if (key === "update") {
+            var s = updateInfo.state;
+            return s === "available" ? t("hint_download") : s === "ready" ? t("hint_install")
+                : ["idle", "current", "failed"].indexOf(s) >= 0 ? t("hint_check") : "";
+        }
+        return "";
     }
     // OK on Updates: check, download what was found, install what was downloaded.
     function updateAction() {
@@ -315,7 +358,6 @@ FocusScope {
             size: ["normal", "large", "larger"].indexOf(s.size) >= 0 ? s.size : "normal",
             motion: s.motion !== false,
             sort: ["lg", "az", "used"].indexOf(s.sort) >= 0 ? s.sort : "lg",
-            recent: [0, 2, 3].indexOf(s.recent) >= 0 ? s.recent : 0,
             tv: s.tv === true,
             showHidden: s.showHidden === true,
             exitTo: /^(last|com\.webos\.app\.(hdmi|dp|usbc)\d)$/.test(s.exitTo) ? s.exitTo : "last",
@@ -338,10 +380,9 @@ FocusScope {
         return fallback;
     }
     function loadExtras() {
-        var h = loaded("hidden", []), hi = loaded("hiddenInputs", []), r = loaded("recent", []);
+        var h = loaded("hidden", []), hi = loaded("hiddenInputs", []);
         hiddenIds = h.length !== undefined ? h : [];
         hiddenInputs = hi.length !== undefined ? hi : [];
-        recentIds = r.length !== undefined ? r : [];
         var u = loaded("usage", {}), c = loaded("colors", {});
         usage = typeof u === "object" && u.length === undefined ? u : {};
         iconColors = typeof c === "object" && c.length === undefined ? c : {};
@@ -376,14 +417,6 @@ FocusScope {
         }
         return list;
     }
-    function recentsFor(ids, all, favKeys, hidden, n) {
-        var out = [];
-        for (var i=0; i<ids.length && out.length < n; i++) {
-            if (favKeys.indexOf(ids[i]) >= 0 || hidden.indexOf(ids[i]) >= 0) continue;
-            for (var j=0; j<all.length; j++) if (all[j].id === ids[i]) { out.push({id: all[j].id, title: all[j].title, icon: all[j].icon}); break; }
-        }
-        return out;
-    }
     function inputsFor(list, hidden, showHidden) {
         var out = [];
         for (var i=0; i<list.length; i++) {
@@ -393,7 +426,7 @@ FocusScope {
         }
         return out;
     }
-    // Opened from here: counts for the "most used" order, the recent list.
+    // Opened from here: counts for the "most used" order.
     function noteLaunch(id) {
         if (!appById(id)) return;
         var u = {}, k;
@@ -401,12 +434,8 @@ FocusScope {
         u[id] = (u[id] || 0) + 1;
         usage = u;
         save(usage, "usage");
-        var r = recentIds.filter(function(x) { return x !== id; });
-        r.unshift(id);
-        recentIds = r.slice(0, 10);
-        save(recentIds, "recent");
     }
-    function heroFor(currentPage, index, appList, favs, editing, busy, error, note, settingsList, toolList, recentList, sourceList, options, colors) {
+    function heroFor(currentPage, index, appList, favs, editing, busy, error, note, toolList, sourceList, colors) {
         var h, n = favs.length;
         if (currentPage === "apps") {
             var app = appList[index] || {title: ""};
@@ -415,23 +444,16 @@ FocusScope {
             var tool = toolList[index] || {title: ""};
             h = {title: tool.title, sub: "", color: neutral};
         } else if (currentPage === "settings") {
-            var item = settingsList[index] || {title: "", value: ""};
-            h = {title: item.title, sub: item.value, color: neutral};
-        } else if (currentPage === "value") {
-            var setting = settingsList[settingIndex] || {title: ""}, option = options[index] || {title: ""};
-            h = {title: setting.title, sub: option.title, color: neutral};
-        } else if (index < recentList.length) {
-            var r = recentList[index];
-            h = {title: r.title, sub: t("recent_sub"), color: styleFor(r.id).accent};
-        } else if (showAddTile && index === recentList.length) {
+            h = {title: "", sub: "", color: neutral};
+        } else if (showAddTile && index === 0) {
             h = {title: t("add_favs_title"), sub: t("add_favs_sub"), color: neutral};
-        } else if (index < recentList.length + n) {
-            var f = favs[index - recentList.length];
+        } else if (index < n) {
+            var f = favs[index];
             h = {title: f.title, sub: editing >= 0 ? t("edit_sub") : "", color: styleFor(f.id).accent};
-        } else if (index < headSlots + sourceList.length) {
-            var source = sourceList[index - headSlots];
+        } else if (index < favSlots + sourceList.length) {
+            var source = sourceList[index - favSlots];
             h = {title: source.title, sub: source.hidden ? t("hidden_sub") : "", color: neutral};
-        } else if (index === headSlots + sourceList.length) {
+        } else if (index === favSlots + sourceList.length) {
             h = {title: t("apps_title"), sub: "", color: neutral};
         } else {
             h = {title: t("system_title"), sub: "", color: neutral};
@@ -441,7 +463,7 @@ FocusScope {
         else if (note) h.sub = note;
         return h;
     }
-    function hintsFor(currentPage, index, keys, editing, language, upd) {
+    function hintsFor(currentPage, index, keys, editing, language, upd, currentPane) {
         var red = t("key_red");
         if (currentPage === "apps") {
             var app = apps[index];
@@ -451,23 +473,17 @@ FocusScope {
         }
         if (currentPage === "system") return [["OK", t("hint_open")], [t("hint_back"), t("hint_favourites")]];
         if (currentPage === "settings") {
-            var item = settingsItems[index];
-            if (item && item.action === "update") {
-                var verb = upd.state === "available" ? "hint_download" : upd.state === "ready" ? "hint_install"
-                    : ["idle", "current", "failed"].indexOf(upd.state) >= 0 ? "hint_check" : "";
-                return verb ? [["OK", t(verb)], [t("hint_back"), t("hint_system")]] : [[t("hint_back"), t("hint_system")]];
-            }
-            if (item && item.action === "backup") return [["OK", t("hint_backup")], [t("hint_back"), t("hint_system")]];
-            if (item && item.action === "restore") return backupInfo.saved ? [["OK", t("hint_restore")], [t("hint_back"), t("hint_system")]] : [[t("hint_back"), t("hint_system")]];
+            if (currentPane === 1) return [["▲ ▼", t("hint_choose")], ["OK", t("hint_done")]];
+            var key = settingKeys[index], verb = actionVerb(key);
+            if (key === "backup" || key === "restore" || key === "update")
+                return verb ? [["OK", verb], [t("hint_back"), t("hint_system")]] : [[t("hint_back"), t("hint_system")]];
             return [["OK", t("hint_change")], [t("hint_back"), t("hint_system")]];
         }
-        if (currentPage === "value") return [["← →", t("hint_choose")], ["OK", t("hint_done")]];
         if (editing >= 0) return [["OK", t("hint_done")]];
-        if (index < recentCount) return [["OK", t("hint_open")], [t("hint_hold_ok"), t("hint_add_fav")]];
-        if (index < recentCount + keys.length) return [["OK", t("hint_open")], [t("hint_hold_ok"), t("hint_edit_favs")]];
-        if (index < headSlots) return [["OK", t("hint_open")]];   // the "Add favourites" tile
-        if (index < headSlots + sourceCount) {
-            var s = sources[index - headSlots], list = [["OK", t("hint_open")]];
+        if (index < keys.length) return [["OK", t("hint_open")], [t("hint_hold_ok"), t("hint_edit_favs")]];
+        if (index < favSlots) return [["OK", t("hint_open")]];   // the "Add favourites" tile
+        if (index < favSlots + sourceCount) {
+            var s = sources[index - favSlots], list = [["OK", t("hint_open")]];
             if (s.kind === "input" && Config.exitTarget) list.push([t("hint_hold_ok"), t("hint_back_target")]);
             if (s.kind === "input") list.push([red, s.hidden ? t("hint_unhide") : t("hint_hide")]);
             return list;
@@ -498,19 +514,18 @@ FocusScope {
         else { ids.push(app.id); notice = t("added_fav"); }
         setFavourites(ids);
     }
-    // from and to are favourite indices; the rail index is recentCount further.
     function moveFavourite(from, to) {
         var ids = favouriteKeys.slice(0), id = ids[from];
         ids[from] = ids[to]; ids[to] = id;
         setFavourites(ids);
-        editIndex = to; selected = recentCount + to;
+        editIndex = to; selected = to;
     }
     function removeFavourite(index) {
         var ids = favouriteKeys.slice(0);
         ids.splice(index, 1);
         editIndex = -1;
         setFavourites(ids);
-        selected = recentCount + Math.max(0, Math.min(index, ids.length-1));
+        selected = Math.max(0, Math.min(index, ids.length-1));
         notice = t("removed_fav");
     }
     // RED: hide an app from Apps (and drop it from the favourites), or show
@@ -533,32 +548,25 @@ FocusScope {
         else { ids.push(id); notice = t("hidden_input"); }
         hiddenInputs = ids;
         save(hiddenInputs, "hiddenInputs");
-        selected = Math.max(0, Math.min(selected, headSlots + sourceCount + 1));
+        selected = Math.max(0, Math.min(selected, favSlots + sourceCount + 1));
     }
     function hideAction() {
         if (!ready || launching) return;
         if (page === "apps") { if (apps[selected]) toggleHidden(apps[selected]); }
-        else if (page === "home" && selected >= headSlots && selected < headSlots + sourceCount) {
-            var s = sources[selected - headSlots];
+        else if (page === "home" && selected >= favSlots && selected < favSlots + sourceCount) {
+            var s = sources[selected - favSlots];
             if (s.kind === "input") toggleHiddenInput(s.id);
         }
     }
-    // Hold OK (or the yellow key): edit a favourite on Home, add a recent app
-    // to them, make an input the BACK-hold target; toggle a favourite in Apps.
+    // Hold OK (or the yellow key): edit a favourite on Home, make an input
+    // the BACK-hold target; toggle a favourite in Apps.
     function secondaryAction() {
         if (!ready || launching) return;
         if (page === "apps") { if (apps[selected]) toggleFavourite(apps[selected]); }
         else if (page !== "home") return;
-        else if (selected < recentCount) {
-            // A recent app becomes the last favourite; the focus goes with it.
-            var app = recents[selected];
-            toggleFavourite(app);
-            var at = favouriteKeys.indexOf(app.id);
-            if (at >= 0) selected = recentCount + at;
-        }
-        else if (selected < recentCount + favCount) { var f = selected - recentCount; editIndex = editIndex === f ? -1 : f; notice = ""; }
-        else if (selected < headSlots + sourceCount) {
-            var s = sources[selected - headSlots];
+        else if (selected < favCount) { editIndex = editIndex === selected ? -1 : selected; notice = ""; }
+        else if (selected >= favSlots && selected < favSlots + sourceCount) {
+            var s = sources[selected - favSlots];
             if (s.kind === "input" && Config.exitTarget) { setSetting("exitTo", s.id); notice = Strings.format(t("exit_set"), {name: s.title}); }
         }
     }
@@ -594,33 +602,32 @@ FocusScope {
         nowTitle = appId === "com.webos.app.livetv" ? t("live_tv") : appId;
         return true;
     }
-    function openSetting(index) {
-        var item = settingsItems[index];
-        if (!item || item.action !== "setting") return;
-        settingIndex = index; valueKey = item.key;
-        var options = optionsFor(item.key, lang, inputs), at = 0;
-        for (var i=0; i<options.length; i++) if (options[i].id === settings[item.key]) at = i;
-        page = "value"; selected = at;
+    // Into the values of the focused setting, on its current value.
+    function enterValues() {
+        var options = valueOptions, at = 0;
+        if (!valueKey || settingFor(valueKey).action !== "setting") return;
+        for (var i=0; i<options.length; i++) if (options[i].id === settings[valueKey]) at = i;
+        valueIndex = at;
+        pane = 1;
     }
-    // On the values page the focused value is the chosen one: moving along
-    // the row is the preview, OK and BACK keep it.
+    // In the values the focused one is the chosen one: moving along them is
+    // the preview, OK and left keep it.
     function applyValue() {
-        var o = valueOptions[selected];
-        if (page === "value" && o) setSetting(valueKey, o.id);
+        var o = valueOptions[valueIndex];
+        if (page === "settings" && pane === 1 && o) setSetting(valueKey, o.id);
     }
-    onSelectedChanged: applyValue()
+    onValueIndexChanged: applyValue()
     function activate(item) {
         if (!ready || launching || !item) return;
         message = "";
-        if (page === "value") { page = "settings"; selected = settingIndex; return; }
         if (item.action === "stock") { stockRequested(); return; }
         if (item.action === "close") { closeHome(); return; }
-        if (item.action === "setting") { openSetting(selected); return; }
+        if (item.action === "setting") { if (pane === 1) pane = 0; else enterValues(); return; }
         if (item.action === "update") { updateAction(); return; }
         if (item.action === "backup") { backupRun("save", backupData()); return; }
         if (item.action === "restore") { if (backupInfo.saved) backupRun("load", null); return; }
         if (item.action === "launcherSettings") {
-            page = "settings"; selected = 0;
+            page = "settings"; selected = 0; pane = 0;
             // Look for a new version each time the settings open, unless one
             // is already found; and whether there is a backup to restore.
             var s = updateInfo.state;
@@ -640,17 +647,15 @@ FocusScope {
         if (page === "apps") return apps[index];
         if (page === "system") return tools[index];
         if (page === "settings") return settingsItems[index];
-        if (page === "value") return valueOptions[index];
-        if (index < recentCount) return recents[index];
-        if (showAddTile && index === recentCount) return addFavouritesTile;
-        if (index < recentCount + favCount) return favourites[index - recentCount];
-        if (index < headSlots + sourceCount) return sources[index - headSlots];
-        return index === headSlots + sourceCount ? {title: t("apps_title"), action: "apps", symbol: "apps"} : {title: t("system_title"), action: "system", symbol: "settings"};
+        if (showAddTile && index === 0) return addFavouritesTile;
+        if (index < favCount) return favourites[index];
+        if (index < favSlots + sourceCount) return sources[index - favSlots];
+        return index === favSlots + sourceCount ? {title: t("apps_title"), action: "apps", symbol: "apps"} : {title: t("system_title"), action: "system", symbol: "settings"};
     }
     // Favourites and settings, in one file next to the launcher on the TV.
     function backupData() {
         return {saved: new Date().toISOString(), version: Config.version, favourites: favouriteIds, settings: settings,
-                hidden: hiddenIds, hiddenInputs: hiddenInputs, usage: usage, recent: recentIds};
+                hidden: hiddenIds, hiddenInputs: hiddenInputs, usage: usage};
     }
     function applyBackup(b) {
         if (!b || typeof b !== "object" || !b.saved) return false;
@@ -660,7 +665,6 @@ FocusScope {
         hiddenIds = b.hidden && b.hidden.length !== undefined ? b.hidden : []; save(hiddenIds, "hidden");
         hiddenInputs = b.hiddenInputs && b.hiddenInputs.length !== undefined ? b.hiddenInputs : []; save(hiddenInputs, "hiddenInputs");
         usage = b.usage && typeof b.usage === "object" ? b.usage : {}; save(usage, "usage");
-        recentIds = b.recent && b.recent.length !== undefined ? b.recent : []; save(recentIds, "recent");
         return true;
     }
     // The answer of one backup step: info and load bring the file's
@@ -676,13 +680,31 @@ FocusScope {
             else message = t("bak_err_read");
         }
     }
-    // Home and System are one rail; All applications is a grid of appColumns.
+    // Home and System are one rail; All applications is a grid of appColumns;
+    // the settings are a menu of rows with the values of one beside them.
     function isOk(key) { return key === Qt.Key_Return || key === Qt.Key_Enter || key === Qt.Key_Select; }
     function isBack(key) { return key === WebOS.Key_webOS_Back || key === Qt.Key_Escape || key === Qt.Key_Back || key === Qt.Key_Backspace || key === 461; }
     function isYellow(key) { return key === WebOS.Key_webOS_Yellow || key === 405; }
     function isRed(key) { return key === WebOS.Key_webOS_Red || key === 403; }
+    function navigateMenu(key) {
+        if (pane === 1) {
+            if (key === Qt.Key_Up) { if (valueIndex > 0) valueIndex--; }
+            else if (key === Qt.Key_Down) { if (valueIndex < valueOptions.length-1) valueIndex++; }
+            else if (key === Qt.Key_Left || isOk(key) || isBack(key)) pane = 0;
+            else return false;
+            return true;
+        }
+        if (key === Qt.Key_Up) { if (selected > 0) selected--; }
+        else if (key === Qt.Key_Down) { if (selected < settingKeys.length-1) selected++; }
+        else if (key === Qt.Key_Right) enterValues();
+        else if (isOk(key)) activate(itemAt(selected));
+        else if (isBack(key)) { page = "system"; selected = toolIndex("launcherSettings"); }
+        else return false;
+        return true;
+    }
     function navigate(key) {
         notice = "";
+        if (page === "settings") return navigateMenu(key);
         // Editing a favourite: arrows move it, DOWN removes it, OK/BACK/UP finish.
         if (page === "home" && editIndex >= 0) {
             if (key === Qt.Key_Left) { if (editIndex > 0) moveFavourite(editIndex, editIndex-1); }
@@ -692,8 +714,7 @@ FocusScope {
             else return false;
             return true;
         }
-        var count = page === "home" ? headSlots+sourceCount+2 : page === "apps" ? apps.length : page === "settings" ? settingsItems.length
-            : page === "value" ? valueOptions.length : tools.length;
+        var count = page === "home" ? favSlots+sourceCount+2 : page === "apps" ? apps.length : tools.length;
         var columns = page === "apps" ? appColumns : count;
         if (key === Qt.Key_Left) { if (selected % columns > 0) selected--; }
         else if (key === Qt.Key_Right) { if (selected % columns < columns-1 && selected+1 < count) selected++; }
@@ -704,9 +725,7 @@ FocusScope {
         } else if (isOk(key)) activate(itemAt(selected));
         else if (isBack(key)) {
             if (page === "home") closeHome();
-            else if (page === "value") { page = "settings"; selected = settingIndex; }
-            else if (page === "settings") { page = "system"; selected = toolIndex("launcherSettings"); }
-            else { selected = headSlots + sourceCount + (page === "apps" ? 0 : 1); page = "home"; }
+            else { selected = favSlots + sourceCount + (page === "apps" ? 0 : 1); page = "home"; }
         } else return false;
         return true;
     }
@@ -746,7 +765,7 @@ FocusScope {
         pressing = false; okHeld = false; longFired = false; holdTimer.stop();
         editIndex = -1; notice = "";
         if (foreground) {
-            launching = false; message = ""; page="home"; selected=0; forceActiveFocus();
+            launching = false; message = ""; page="home"; selected=0; pane=0; forceActiveFocus();
             tick();
             if (ready) { catalog.callService({}); foregroundInfo.callService({extraInfo: true}); loadInputs(); dailyUpdateCheck(); }
         }
@@ -990,57 +1009,14 @@ FocusScope {
             c.moveTo(17,33); c.lineTo(17,25); c.lineTo(23,25); c.lineTo(23,33);
         } else if (symbol === "back") {
             c.moveTo(16,10); c.lineTo(6,20); c.lineTo(16,30); c.moveTo(6,20); c.lineTo(34,20);
-        } else if (symbol === "reset") {
-            c.arc(20,21,12,-Math.PI*0.75,Math.PI*1.05,false);
-            c.moveTo(5,11); c.lineTo(11.5,12.5); c.lineTo(12,6);
         } else if (symbol === "add") {
             c.moveTo(20,9); c.lineTo(20,31); c.moveTo(9,20); c.lineTo(31,20);
-        } else if (symbol === "language") {
-            c.arc(20,20,13,0,Math.PI*2); c.moveTo(7,20); c.lineTo(33,20);
-            c.moveTo(20,7); c.bezierCurveTo(13,13,13,27,20,33); c.moveTo(20,7); c.bezierCurveTo(27,13,27,27,20,33);
-        } else if (symbol === "exit") {
-            c.roundedRect(6,9,28,19,3,3); c.moveTo(14,33); c.lineTo(26,33);
-            c.moveTo(20,13); c.lineTo(20,23); c.moveTo(16,19); c.lineTo(20,23); c.lineTo(24,19);
-        } else if (symbol === "title") {
-            c.moveTo(9,10); c.lineTo(31,10); c.moveTo(20,10); c.lineTo(20,31);
-        } else if (symbol === "clock") {
-            c.arc(20,20,13,0,Math.PI*2); c.moveTo(20,12); c.lineTo(20,20); c.lineTo(26,23);
         } else if (symbol === "tune") {
             c.moveTo(10,6); c.lineTo(10,34); c.moveTo(20,6); c.lineTo(20,34); c.moveTo(30,6); c.lineTo(30,34); c.stroke();
             c.beginPath(); c.roundedRect(6,22,8,6,2,2); c.roundedRect(16,10,8,6,2,2); c.roundedRect(26,18,8,6,2,2);
             c.fillStyle = c.strokeStyle; c.fill();
-        } else if (symbol === "download") {
-            c.moveTo(20,7); c.lineTo(20,25); c.moveTo(13,18); c.lineTo(20,25); c.lineTo(27,18);
-            c.moveTo(8,26); c.lineTo(8,33); c.lineTo(32,33); c.lineTo(32,26);
-        } else if (symbol === "update") {
-            // Into the box: a backup.
-            c.moveTo(20,6); c.lineTo(20,22); c.moveTo(14,16); c.lineTo(20,22); c.lineTo(26,16);
-            c.roundedRect(7,24,26,10,3,3);
-        } else if (symbol === "restore") {
-            // Out of the box: a restore.
-            c.moveTo(20,22); c.lineTo(20,6); c.moveTo(14,12); c.lineTo(20,6); c.lineTo(26,12);
-            c.roundedRect(7,24,26,10,3,3);
-        } else if (symbol === "flask") {
-            c.moveTo(15,7); c.lineTo(25,7); c.moveTo(17,7); c.lineTo(17,17); c.lineTo(8,32); c.lineTo(32,32); c.lineTo(23,17); c.lineTo(23,7);
-            c.moveTo(12,25); c.lineTo(28,25);
-        } else if (symbol === "theme") {
-            c.arc(20,20,13,0,Math.PI*2); c.stroke();
-            c.beginPath(); c.arc(20,20,13,-Math.PI/2,Math.PI/2,false); c.closePath();
-            c.fillStyle = c.strokeStyle; c.fill();
         } else if (symbol === "apps") {
             c.roundedRect(7,7,11,11,3,3); c.roundedRect(22,7,11,11,3,3); c.roundedRect(7,22,11,11,3,3); c.roundedRect(22,22,11,11,3,3);
-        } else if (symbol === "size") {
-            c.moveTo(6,31); c.lineTo(14,9); c.lineTo(22,31); c.moveTo(9,24); c.lineTo(19,24);
-            c.moveTo(24,31); c.lineTo(29,18); c.lineTo(34,31); c.moveTo(26,27); c.lineTo(32,27);
-        } else if (symbol === "motion") {
-            c.moveTo(5,20); c.bezierCurveTo(10,6,15,6,20,20); c.bezierCurveTo(25,34,30,34,35,20);
-        } else if (symbol === "sort") {
-            c.moveTo(7,11); c.lineTo(33,11); c.moveTo(7,20); c.lineTo(26,20); c.moveTo(7,29); c.lineTo(19,29);
-        } else if (symbol === "tv") {
-            c.roundedRect(5,8,30,20,3,3); c.moveTo(14,34); c.lineTo(26,34); c.moveTo(20,28); c.lineTo(20,34);
-        } else if (symbol === "eye") {
-            c.moveTo(5,20); c.bezierCurveTo(12,9,28,9,35,20); c.bezierCurveTo(28,31,12,31,5,20); c.closePath();
-            c.moveTo(24,20); c.arc(20,20,4,0,Math.PI*2); c.moveTo(9,31); c.lineTo(31,9);
         }
         c.stroke();
     }
@@ -1056,17 +1032,19 @@ FocusScope {
         Behavior on lift { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
 
         // Shade only under the name and the rail, in the lower part of the
-        // screen; the rest of the picture stays as it is.
+        // screen; the rest of the picture stays as it is. Under the settings
+        // menu the whole screen is shaded.
         Rectangle {
             id: scrim
             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-            height: shell.page === "apps" ? shell.px(660) : shell.px(540)
+            height: shell.page === "settings" ? parent.height : shell.page === "apps" ? shell.px(660) : shell.px(540)
+            Behavior on height { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
             property color tint: shell.theme.scrim
             function a(v) { return Qt.rgba(tint.r, tint.g, tint.b, v); }
             gradient: Gradient {
-                GradientStop { position: 0.00; color: scrim.a(0) }
-                GradientStop { position: 0.22; color: scrim.a(0.30) }
-                GradientStop { position: 0.45; color: scrim.a(0.66) }
+                GradientStop { position: 0.00; color: scrim.a(shell.page === "settings" ? 0.55 : 0) }
+                GradientStop { position: 0.22; color: scrim.a(shell.page === "settings" ? 0.65 : 0.30) }
+                GradientStop { position: 0.45; color: scrim.a(shell.page === "settings" ? 0.75 : 0.66) }
                 GradientStop { position: 0.68; color: scrim.a(0.86) }
                 GradientStop { position: 1.00; color: scrim.a(0.93) }
             }
@@ -1113,6 +1091,7 @@ FocusScope {
         // Hero: the focused name and one line of context under it.
         Item {
             id: heroGroup
+            visible: shell.page !== "settings"
             x: shell.margin; y: shell.heroBaseline - shell.px(160)
             width: shell.width - 2*shell.margin; height: shell.px(220)
             Item { id: heroBase; y: shell.px(160); width: 1; height: 1 }
@@ -1155,9 +1134,7 @@ FocusScope {
                 readonly property int size: shell.tile
                 readonly property int corner: shell.px(30)
                 property bool chosen: shell.selected === navIndex
-                // Editing: this favourite (editIndex counts favourites; the rail
-                // index is recentCount further).
-                readonly property bool editing: shell.page === "home" && shell.editIndex >= 0 && shell.editIndex + shell.recentCount === navIndex
+                readonly property bool editing: shell.page === "home" && shell.editIndex === navIndex
                 readonly property bool starred: shell.page === "apps" && entry !== undefined && shell.favouriteKeys.indexOf(entry.id) >= 0
                 readonly property bool hidden: shell.page === "apps" && entry !== undefined && shell.hiddenIds.indexOf(entry.id) >= 0
                 width: size; height: size
@@ -1221,7 +1198,7 @@ FocusScope {
                 property bool chosen: shell.selected === navIndex
                 // A new version is there: a dot on the way to the updater.
                 readonly property bool badge: shell.updateAvailable && entry !== undefined && entry !== null &&
-                    (entry.action === "system" || entry.action === "launcherSettings" || entry.action === "update")
+                    (entry.action === "system" || entry.action === "launcherSettings")
                 width: size; height: size
                 z: chosen ? 2 : 0
                 scale: chosen ? (shell.pressing ? 1.03 : 1.1) : 1
@@ -1263,8 +1240,7 @@ FocusScope {
                 }
             }
         }
-        // A pill: a source on the Home rail (HDMI n with the device under it,
-        // Live TV) or a value on the values page.
+        // A source pill on the Home rail: HDMI n with the device under it, or Live TV.
         Component {
             id: pillTile
             Rectangle {
@@ -1309,7 +1285,7 @@ FocusScope {
             }
         }
 
-        // Home rail: recent apps, favourites, sources, then the two doors.
+        // Home rail: favourites, sources, then the two doors.
         Row {
             id: rail
             visible: page === "home"
@@ -1321,19 +1297,10 @@ FocusScope {
             Row {
                 spacing: shell.gap; anchors.verticalCenter: parent.verticalCenter
                 Repeater {
-                    model: recents
-                    Loader {
-                        sourceComponent: appTile; z: item && item.chosen ? 2 : 0
-                        onLoaded: { item.entry=modelData; item.navIndex=index; }
-                    }
-                }
-                // Between the recent apps and the favourites.
-                Rectangle { visible: shell.recentCount > 0 && shell.favSlots > 0; width: 1; height: shell.px(72); anchors.verticalCenter: parent.verticalCenter; color: shell.chipEdge }
-                Repeater {
                     model: favourites
                     Loader {
                         sourceComponent: appTile; z: item && item.chosen ? 2 : 0
-                        onLoaded: { item.entry=modelData; item.navIndex=Qt.binding(function() { return shell.recentCount+index; }); }
+                        onLoaded: { item.entry=modelData; item.navIndex=index; }
                     }
                 }
                 Loader {
@@ -1341,7 +1308,7 @@ FocusScope {
                     visible: active
                     property int glyphSize: shell.tile
                     sourceComponent: glyphTile
-                    onLoaded: { item.entry = Qt.binding(function() { return shell.addFavouritesTile; }); item.navIndex = Qt.binding(function() { return shell.recentCount; }); }
+                    onLoaded: { item.entry = Qt.binding(function() { return shell.addFavouritesTile; }); item.navIndex = 0; }
                 }
             }
             Row {
@@ -1350,7 +1317,7 @@ FocusScope {
                     model: sources
                     Loader {
                         sourceComponent: pillTile; z: item && item.chosen ? 2 : 0
-                        onLoaded: { item.entry=modelData; item.navIndex=Qt.binding(function() { return shell.headSlots+index; }); }
+                        onLoaded: { item.entry=modelData; item.navIndex=Qt.binding(function() { return shell.favSlots+index; }); }
                     }
                 }
             }
@@ -1363,7 +1330,7 @@ FocusScope {
                         sourceComponent: glyphTile
                         onLoaded: {
                             item.entry = Qt.binding(function() { return index === 0 ? {title: shell.t("apps_title"), action: "apps", symbol: "apps"} : {title: shell.t("system_title"), action: "system", symbol: "settings"}; });
-                            item.navIndex = Qt.binding(function() { return shell.headSlots+shell.sourceCount+index; });
+                            item.navIndex = Qt.binding(function() { return shell.favSlots+shell.sourceCount+index; });
                         }
                     }
                 }
@@ -1423,62 +1390,231 @@ FocusScope {
             }
         }
 
-        // System, the launcher settings and a setting's values: one rail
-        // that scrolls sideways when it is longer than the screen, keeping
-        // the focused tile in view.
-        Flickable {
-            id: railScroll
-            visible: page === "system" || page === "settings" || page === "value"
-            x: shell.margin-shell.px(20); y: shell.railY-shell.px(24)
-            width: shell.width-2*shell.margin+shell.px(40); height: shell.tile+shell.px(48)
-            clip: true; interactive: false
-            contentWidth: Math.max(width, railRow.width+shell.px(40)); contentHeight: height
-            Behavior on contentX { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
-            // Where the focused tile is, added up from the tiles' widths: the
-            // row places them only a frame later, and a selection often comes
-            // in the same breath as the page (opening a setting, BACK from it).
-            function follow() {
-                if (!visible) return;
-                var n = railRepeater.count, pad = shell.px(20), left = railRow.x, total = railRow.x, i, it;
-                if (shell.selected < 0 || shell.selected >= n) return;
-                for (i=0; i<n; i++) {
-                    it = railRepeater.itemAt(i);
-                    if (!it) return;
-                    if (i === shell.selected) left = total;
-                    total += it.width + (i < n-1 ? railRow.spacing : 0);
+        // System: the same rail, glyph tiles at full size.
+        Row {
+            visible: page === "system"
+            x: shell.margin; y: shell.railY; spacing: shell.gap
+            Repeater {
+                model: shell.tools
+                Loader {
+                    property int glyphSize: shell.tile
+                    sourceComponent: glyphTile; z: item && item.chosen ? 2 : 0
+                    onLoaded: { item.entry=modelData; item.navIndex=index; }
                 }
-                var right = left + railRepeater.itemAt(shell.selected).width, at = contentX;
-                if (right + pad > at + width) at = right + pad - width;
-                else if (left - pad < at) at = left - pad;
-                contentX = Math.max(0, Math.min(at, Math.max(width, total + pad) - width));
-            }
-            Row {
-                id: railRow
-                x: shell.px(20); y: shell.px(24); height: shell.tile; spacing: shell.page === "value" ? shell.px(12) : shell.gap
-                Repeater {
-                    id: railRepeater
-                    model: page === "value" ? shell.valueOptions : page === "settings" ? shell.settingsItems : page === "system" ? shell.tools : []
-                    Loader {
-                        property int glyphSize: shell.tile
-                        anchors.verticalCenter: parent.verticalCenter
-                        sourceComponent: shell.page === "value" ? pillTile : glyphTile; z: item && item.chosen ? 2 : 0
-                        onLoaded: { item.entry=modelData; item.navIndex=index; }
-                    }
-                }
-            }
-            Connections {
-                target: shell
-                onSelectedChanged: railScroll.follow()
-                onPageChanged: { railScroll.contentX = 0; railScroll.follow(); }
             }
         }
 
         // The version, the TV's webOS and the variant, bottom right.
         Text {
-            visible: page === "system" || page === "settings"
+            visible: page === "system"
             anchors.right: parent.right; anchors.rightMargin: shell.margin; y: shell.height-shell.px(43)
             text: "Homebar " + Config.version + (Config.webos ? " · webOS " + Config.webos : "") + (Config.platform ? " · " + Config.platform : "")
             font.family: shell.fontName; font.pixelSize: shell.pt(14); color: shell.theme.version
+        }
+
+        // Launcher settings: a menu over most of the screen, in the panel's
+        // own colours. On the left the settings in groups, each with its
+        // value; on the right the values of the focused one, a dot on the
+        // chosen value, or what an action has to say. Up and down move, OK
+        // or right goes into the values, where up and down choose (each
+        // applies at once: the menu itself is the preview) and OK or left
+        // come back; BACK closes the menu.
+        Rectangle {
+            id: menu
+            visible: opacity > 0
+            opacity: shell.page === "settings" ? 1 : 0
+            property real lift: shell.page === "settings" ? 0 : shell.px(16)
+            transform: Translate { y: menu.lift }
+            Behavior on opacity { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
+            Behavior on lift { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
+            x: shell.margin; y: shell.px(110)
+            width: shell.width - 2*shell.margin; height: shell.height - shell.px(110) - shell.px(96)
+            radius: shell.px(30); color: shell.chip; border.width: 1; border.color: shell.chipEdge
+            readonly property int pad: shell.px(40)
+            readonly property int rowHeight: shell.pt(56)
+            readonly property int headerHeight: shell.pt(44)
+            readonly property int listTop: shell.px(100)
+            readonly property int listWidth: shell.px(720)
+
+            Text {
+                x: menu.pad; y: shell.px(30)
+                text: shell.t("launcher_settings"); font.family: shell.fontName; font.bold: true; font.pixelSize: shell.pt(34); font.letterSpacing: -0.8*shell.u; color: shell.ink
+            }
+            Text {
+                anchors.right: parent.right; anchors.rightMargin: menu.pad; y: shell.px(30) + shell.pt(34) - shell.pt(14) - shell.px(4)
+                text: "Homebar " + Config.version + (Config.webos ? " · webOS " + Config.webos : "") + (Config.platform ? " · " + Config.platform : "")
+                font.family: shell.fontName; font.pixelSize: shell.pt(14); color: shell.ink3
+            }
+            Rectangle { x: menu.pad; y: menu.listTop - shell.px(14); width: parent.width - 2*menu.pad; height: 1; color: shell.chipEdge }
+
+            // Where a row starts in the list, from the rows' heights (the
+            // column places them only a frame later).
+            function rowY(index) {
+                var y = 0;
+                for (var i=0; i<shell.menuRows.length; i++) {
+                    var r = shell.menuRows[i];
+                    if (r.index === index) return y;
+                    y += r.header !== undefined ? menu.headerHeight + (i > 0 ? shell.px(12) : 0) : menu.rowHeight;
+                }
+                return y;
+            }
+            // The settings, in groups, scrolling so the focused one stays in view.
+            Flickable {
+                id: menuList
+                x: menu.pad; y: menu.listTop; width: menu.listWidth; height: menu.height - menu.listTop - menu.pad
+                clip: true; interactive: false
+                contentWidth: width; contentHeight: Math.max(height, menuColumn.height)
+                Behavior on contentY { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
+                function follow() {
+                    if (shell.page !== "settings") return;
+                    var top = menu.rowY(shell.selected), bottom = top + menu.rowHeight, at = contentY;
+                    if (bottom > at + height) at = bottom - height;
+                    else if (top < at + menu.headerHeight) at = Math.max(0, top - menu.headerHeight - shell.px(12));
+                    contentY = Math.max(0, Math.min(at, Math.max(height, menuColumn.height) - height));
+                }
+                Column {
+                    id: menuColumn
+                    width: parent.width
+                    Repeater {
+                        model: shell.menuRows
+                        Item {
+                            readonly property bool isHeader: modelData.header !== undefined
+                            readonly property var setting: isHeader ? null : shell.settingsItems[modelData.index]
+                            readonly property bool chosen: !isHeader && shell.selected === modelData.index
+                            width: menuColumn.width; height: isHeader ? menu.headerHeight + (index > 0 ? shell.px(12) : 0) : menu.rowHeight
+                            // A group's name.
+                            Text {
+                                visible: isHeader; x: shell.px(20); anchors.bottom: parent.bottom; anchors.bottomMargin: shell.px(10)
+                                text: isHeader ? modelData.header : ""; font.family: shell.fontName; font.bold: true; font.pixelSize: shell.pt(13); font.letterSpacing: 1.2*shell.u; font.capitalization: Font.AllUppercase
+                                color: shell.ink3
+                            }
+                            // A setting: its name, its value at the right.
+                            Rectangle {
+                                visible: !isHeader
+                                anchors.fill: parent; anchors.topMargin: shell.px(3); anchors.bottomMargin: shell.px(3)
+                                radius: shell.px(14)
+                                color: chosen ? (shell.pane === 0 ? shell.theme.focus : shell.theme.tile) : "transparent"
+                                border.width: chosen && shell.pane === 1 ? 1 : 0; border.color: shell.theme.focus
+                                Behavior on color { ColorAnimation { duration: shell.dur(120) } }
+                                Text {
+                                    id: rowName
+                                    x: shell.px(20); anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, parent.width - rowValue.width - shell.px(60))
+                                    elide: Text.ElideRight
+                                    text: setting ? setting.title : ""; font.family: shell.fontName; font.pixelSize: shell.pt(22)
+                                    color: chosen && shell.pane === 0 ? shell.theme.onFocus : shell.ink
+                                }
+                                Text {
+                                    id: rowValue
+                                    anchors.right: parent.right; anchors.rightMargin: shell.px(20); anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, parent.width*0.5); elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
+                                    text: setting ? setting.value : ""; font.family: shell.fontName; font.pixelSize: shell.pt(19)
+                                    color: chosen && shell.pane === 0 ? shell.theme.onFocus2 : shell.ink3
+                                }
+                                // The pointer picks a row when it moves over one, not when a
+                                // row appears under a pointer left where it was.
+                                MouseArea {
+                                    anchors.fill: parent; hoverEnabled: true
+                                    onPositionChanged: { if (shell.pointerMoved(parent, mouse) && (shell.pane !== 0 || shell.selected !== modelData.index)) { shell.pane = 0; shell.selected = modelData.index; } }
+                                    onClicked: { shell.pane = 0; shell.selected = modelData.index; shell.activate(shell.itemAt(modelData.index)); }
+                                }
+                            }
+                        }
+                    }
+                }
+                Connections {
+                    target: shell
+                    onSelectedChanged: menuList.follow()
+                    onPageChanged: { menuList.contentY = 0; menuList.follow(); }
+                }
+            }
+            Rectangle { x: menu.pad + menu.listWidth + shell.px(40); y: menu.listTop; width: 1; height: menuList.height; color: shell.chipEdge }
+
+            // The focused setting: its values, or an action's status.
+            Item {
+                id: valuesPane
+                x: menu.pad + menu.listWidth + shell.px(80); y: menu.listTop
+                width: menu.width - x - menu.pad; height: menuList.height
+                clip: true
+                readonly property var setting: shell.page === "settings" && shell.selected < shell.settingsItems.length ? shell.settingsItems[shell.selected] : null
+                readonly property bool actionRow: setting !== null && setting.action !== "setting"
+                Text {
+                    id: valuesTitle
+                    x: shell.px(20); y: shell.px(6); width: parent.width - shell.px(40); elide: Text.ElideRight
+                    text: valuesPane.setting ? valuesPane.setting.title : ""
+                    font.family: shell.fontName; font.bold: true; font.pixelSize: shell.pt(28); font.letterSpacing: -0.6*shell.u; color: shell.ink
+                }
+                // An action's status, and what OK does with it.
+                Column {
+                    visible: valuesPane.actionRow
+                    x: shell.px(20); y: valuesTitle.y + valuesTitle.height + shell.px(18); width: parent.width - shell.px(40); spacing: shell.px(16)
+                    Text {
+                        width: parent.width; wrapMode: Text.WordWrap
+                        text: valuesPane.setting ? valuesPane.setting.value : ""
+                        font.family: shell.fontName; font.pixelSize: shell.pt(21); color: shell.ink2
+                    }
+                    Row {
+                        spacing: shell.px(9); visible: valuesPane.setting !== null && shell.actionVerb(valuesPane.setting.key) !== ""
+                        Rectangle {
+                            width: okLabel.implicitWidth+shell.px(14); height: shell.pt(24); radius: shell.px(7); color: "transparent"; border.width: Math.max(1, 1.5*shell.u); border.color: shell.ink3
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text { id: okLabel; anchors.centerIn: parent; text: "OK"; font.family: shell.fontName; font.bold: true; font.pixelSize: shell.pt(12); color: shell.ink2 }
+                        }
+                        Text { text: valuesPane.setting ? shell.actionVerb(valuesPane.setting.key) : ""; font.family: shell.fontName; font.pixelSize: shell.pt(17); color: shell.ink2; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                }
+                // The values: a dot on the chosen one; the focused one lit
+                // while the values have the focus.
+                Flickable {
+                    id: valueList
+                    visible: !valuesPane.actionRow
+                    x: 0; y: valuesTitle.y + valuesTitle.height + shell.px(14); width: parent.width; height: parent.height - y
+                    clip: true; interactive: false
+                    contentWidth: width; contentHeight: Math.max(height, valueColumn.height)
+                    Behavior on contentY { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
+                    function follow() {
+                        var top = shell.valueIndex*menu.rowHeight, bottom = top + menu.rowHeight, at = contentY;
+                        if (bottom > at + height) at = bottom - height;
+                        else if (top < at) at = top;
+                        contentY = Math.max(0, Math.min(at, Math.max(height, valueColumn.height) - height));
+                    }
+                    Column {
+                        id: valueColumn
+                        width: parent.width
+                        Repeater {
+                            model: shell.valueOptions
+                            Rectangle {
+                                readonly property bool current: shell.settings[shell.valueKey] === modelData.id
+                                readonly property bool lit: shell.pane === 1 && shell.valueIndex === index
+                                width: valueColumn.width; height: menu.rowHeight; radius: shell.px(14)
+                                color: lit ? shell.theme.focus : "transparent"
+                                Behavior on color { ColorAnimation { duration: shell.dur(120) } }
+                                Rectangle {
+                                    x: shell.px(20); anchors.verticalCenter: parent.verticalCenter
+                                    width: shell.px(22); height: width; radius: width/2; color: "transparent"
+                                    border.width: Math.max(1, 2*shell.u); border.color: lit ? shell.theme.onFocus : current ? shell.theme.focus : shell.ink3
+                                    Rectangle { anchors.centerIn: parent; width: shell.px(10); height: width; radius: width/2; visible: current; color: lit ? shell.theme.onFocus : shell.theme.focus }
+                                }
+                                Text {
+                                    x: shell.px(58); anchors.verticalCenter: parent.verticalCenter; width: parent.width - shell.px(78); elide: Text.ElideRight
+                                    text: modelData.title; font.family: shell.fontName; font.pixelSize: shell.pt(22)
+                                    color: lit ? shell.theme.onFocus : shell.ink
+                                }
+                                MouseArea {
+                                    anchors.fill: parent; hoverEnabled: true
+                                    onPositionChanged: { if (shell.pointerMoved(parent, mouse) && (shell.pane !== 1 || shell.valueIndex !== index)) { shell.pane = 1; shell.valueIndex = index; shell.applyValue(); } }
+                                    onClicked: { shell.pane = 1; shell.valueIndex = index; shell.applyValue(); }
+                                }
+                            }
+                        }
+                    }
+                    Connections {
+                        target: shell
+                        onValueIndexChanged: valueList.follow()
+                        onSelectedChanged: valueList.contentY = 0
+                    }
+                }
+            }
         }
     } // panel
 }

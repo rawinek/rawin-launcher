@@ -57,13 +57,12 @@ Item {
         var s = JSON.parse(json);
         shell.settings = shell.validSettings(s.settings || {});
         shell.favouriteIds = s.favs; shell.allInputs = s.inputs;
-        shell.recentIds = s.recent || []; shell.hiddenIds = s.hidden || []; shell.hiddenInputs = s.hiddenInputs || [];
+        shell.hiddenIds = s.hidden || []; shell.hiddenInputs = s.hiddenInputs || [];
         shell.usage = s.usage || {};
         shell.updateInfo = {state: s.updateState || "idle", latest: "9.9.9", failed: ""};
-        shell.page = "home"; shell.selected = 0;
-        if (s.openSetting !== undefined) { shell.page = "settings"; shell.openSetting(s.openSetting); }
-        else shell.page = s.page;
-        shell.selected = s.selected;
+        shell.page = "home"; shell.selected = 0; shell.pane = 0;
+        shell.page = s.page; shell.selected = s.selected;
+        if (s.pane) { shell.enterValues(); if (s.valueIndex !== undefined) shell.valueIndex = s.valueIndex; }
     }
     // A new app list, as the TV would send one: the glow reader runs through the icons.
     function glow() { shell.applications = shell.applications.slice(0); }
@@ -149,14 +148,14 @@ def main():
         scenes = [
             scene("home-hdmi2", page="home", selected=8),
             scene("home-fav0", page="home", selected=0),
-            scene("home-recent-tv", page="home", selected=0, settings=dict(theme, recent=3, tv=True), recent=["spotify", "kodi", "emby", "netflix"]),
+            scene("home-tv", page="home", selected=0, settings=dict(theme, tv=True)),
             scene("home-hidden-shown", page="home", selected=10, settings=dict(theme, showHidden=True), hiddenInputs=["com.webos.app.hdmi4"], hidden=["kids"]),
             scene("apps", page="apps", selected=14),
             scene("apps-az-hidden", page="apps", selected=13, settings=dict(theme, sort="az", showHidden=True), hidden=["kids", "kodi"]),
             scene("system-update", page="system", selected=1, updateState="available"),
             scene("settings", page="settings", selected=1),
             scene("settings-end", page="settings", selected=13, updateState="available"),
-            scene("value-theme", openSetting=1, selected=3),
+            scene("settings-values", page="settings", selected=1, pane=1, valueIndex=3),
             scene("home-larger", page="home", selected=8, settings=dict(theme, size="larger")),
             scene("home-nofavs", page="home", selected=0, favs=[]),
             scene("home-2inputs", page="home", selected=3, favs=favs[:3], inputs=inputs(INPUTS_SMALL)),

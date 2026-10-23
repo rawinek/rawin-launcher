@@ -62,10 +62,10 @@ Positions hang from the bottom and the right edge (`shell.height - px(…)`,
 `anchors.right`), never from the top left, so a wider screen gets more rail
 and more columns. Text goes through `pt()`, which also takes the text size
 setting. `tools/render-panel.py` draws a set of scenes (Home with seven
-favourites and long HDMI-CEC names, recent apps and Live TV, hidden inputs
-and apps, Apps in each order, System with an update waiting, the settings
-and a setting's values, the larger text size, no favourites, two inputs) at
-a size:
+favourites and long HDMI-CEC names, Live TV, hidden inputs and apps, Apps
+in each order, System with an update waiting, the settings menu on a
+setting, on its values and on an action, the larger text size, no
+favourites, two inputs) at a size:
 
 ```sh
 python3 -m pip install PySide6
