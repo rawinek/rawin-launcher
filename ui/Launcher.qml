@@ -51,7 +51,7 @@ FocusScope {
     // asked for, and the inputs. The rail, the navigation and the BACK-hold
     // target all follow these lists.
     property var allInputs: Config.inputs
-    readonly property var inputs: inputsFor(allInputs, hiddenInputs, settings.showHidden, textZoom)
+    readonly property var inputs: inputsFor(allInputs, hiddenInputs, settings.showHidden)
     readonly property var tvSource: ({id: "com.webos.app.livetv", title: t("live_tv"), detail: "", present: true, kind: "tv"})
     readonly property var sources: (settings.tv ? [tvSource] : []).concat(inputs)
     readonly property int sourceCount: sources.length
@@ -87,8 +87,7 @@ FocusScope {
     // choosing a value does not rebuild the menu around it.
     readonly property var settingGroups: groupsFor(Config.exitTarget)
     readonly property var settingKeys: keysOf(settingGroups)
-    // Built anew when the text size changes: the measurements in them start over.
-    readonly property var menuRows: rowsOf(settingGroups, lang, textZoom)
+    readonly property var menuRows: rowsOf(settingGroups, lang)
     readonly property var settingsItems: settingKeys.map(function(k) { return settingFor(k); })
     property int pane: 0
     property int valueIndex: 0
@@ -203,7 +202,7 @@ FocusScope {
     }
     // The menu's rows: {header: name} before each group, {key, index} for
     // each setting; index counts the settings alone, as selected does.
-    function rowsOf(groups, language, zoom) {
+    function rowsOf(groups, language) {
         var out = [], n = 0;
         for (var i=0; i<groups.length; i++) {
             out.push({header: t(groups[i].title)});
@@ -408,7 +407,7 @@ FocusScope {
         }
         return list;
     }
-    function inputsFor(list, hidden, showHidden, zoom) {
+    function inputsFor(list, hidden, showHidden) {
         var out = [];
         for (var i=0; i<list.length; i++) {
             var d = list[i], h = hidden.indexOf(d.id) >= 0;
@@ -1069,12 +1068,13 @@ FocusScope {
                     visible: nowTitle !== ""; spacing: shell.px(10); anchors.verticalCenter: parent.verticalCenter
                     Rectangle { width: shell.px(7); height: width; radius: width/2; color: shell.theme.focus; anchors.verticalCenter: parent.verticalCenter }
                     // A long app name is cut, not the chip pushed off the screen. Its
-                    // width comes from TextMetrics: an elided Text whose width hangs
-                    // on its own implicitWidth keeps an old text's width on the TV.
-                    TextMetrics { id: nowMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(19)}); text: nowTitle }
+                    // width is measured by a hidden twin: an elided Text whose width
+                    // hangs on its own implicitWidth keeps an old text's width on the
+                    // TV, and a metrics object there misses a change of the text size.
+                    Text { id: nowTwin; visible: false; text: nowTitle; font.family: shell.fontName; font.pixelSize: shell.pt(19) }
                     Text {
                         text: nowTitle; font.family: shell.fontName; font.pixelSize: shell.pt(19); color: shell.theme.text; anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(Math.ceil(nowMetrics.advanceWidth) + 1, shell.px(480)); elide: Text.ElideRight
+                        width: Math.min(Math.ceil(nowTwin.implicitWidth) + 1, shell.px(480)); elide: Text.ElideRight
                     }
                 }
                 Rectangle { visible: nowTitle !== ""; width: 1; height: shell.pt(20); color: shell.theme.divider; anchors.verticalCenter: parent.verticalCenter }
@@ -1263,10 +1263,10 @@ FocusScope {
                         font.family: shell.fontName; font.bold: true; font.pixelSize: pillDevice.visible ? shell.pt(19) : shell.pt(21); font.letterSpacing: -0.2*shell.u
                         color: pill.chosen ? shell.theme.onFocus : pill.dim ? shell.theme.dim : shell.theme.label
                     }
-                    TextMetrics { id: deviceMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(13)}); text: pill.entry && pill.entry.detail ? pill.entry.detail : "" }
+                    Text { id: deviceTwin; visible: false; text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; font.family: shell.fontName; font.pixelSize: shell.pt(13) }
                     Text {
                         id: pillDevice; visible: !!(pill.entry && pill.entry.detail); anchors.horizontalCenter: parent.horizontalCenter
-                        text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; width: Math.min(Math.ceil(deviceMetrics.advanceWidth) + 1, shell.pillTextCap); elide: Text.ElideRight
+                        text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; width: Math.min(Math.ceil(deviceTwin.implicitWidth) + 1, shell.pillTextCap); elide: Text.ElideRight
                         font.family: shell.fontName; font.pixelSize: shell.pt(13)
                         color: pill.chosen ? shell.theme.onFocus2 : pill.dim ? shell.theme.dim2 : shell.ink3
                     }
@@ -1450,14 +1450,17 @@ FocusScope {
                 id: menuList
                 x: menu.pad; y: menu.listTop; width: menu.listWidth; height: menu.height - menu.listTop - menu.pad
                 clip: true; interactive: false
-                contentWidth: width; contentHeight: Math.max(height, menuColumn.height)
+                // Room under the last row for the fade at the bottom edge.
+                readonly property int fade: shell.px(18)
+                contentWidth: width; contentHeight: Math.max(height, menuColumn.height + fade)
                 Behavior on contentY { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
+                // The focused row in view, and clear of the fades at the edges.
                 function follow() {
                     if (shell.page !== "settings") return;
                     var top = menu.rowY(shell.selected), bottom = top + menu.rowHeight, at = contentY;
-                    if (bottom > at + height) at = bottom - height;
+                    if (bottom + fade > at + height) at = bottom + fade - height;
                     else if (top < at + menu.headerHeight) at = Math.max(0, top - menu.headerHeight - shell.px(12));
-                    contentY = Math.max(0, Math.min(at, Math.max(height, menuColumn.height) - height));
+                    contentY = Math.max(0, Math.min(at, contentHeight - height));
                 }
                 Column {
                     id: menuColumn
@@ -1483,22 +1486,23 @@ FocusScope {
                                 color: chosen ? (shell.pane === 0 ? shell.theme.focus : shell.theme.tile) : "transparent"
                                 border.width: chosen && shell.pane === 1 ? 1 : 0; border.color: shell.theme.focus
                                 Behavior on color { ColorAnimation { duration: shell.dur(120) } }
-                                // Both texts are measured apart (TextMetrics, the font as one
-                                // value so a new size reaches it) and cut to what the row has:
-                                // the value to half of it, the name to the rest.
-                                TextMetrics { id: nameMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(22)}); text: setting ? setting.title : "" }
-                                TextMetrics { id: valueMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(19)}); text: setting ? setting.value : "" }
+                                // Both texts are measured by hidden twins (no elide, no width:
+                                // their implicitWidth is the text's own, at the text size of
+                                // the moment) and cut to what the row has: the value to half
+                                // of it, the name to the rest.
+                                Text { id: nameTwin; visible: false; text: setting ? setting.title : ""; font.family: shell.fontName; font.pixelSize: shell.pt(22) }
+                                Text { id: valueTwin; visible: false; text: setting ? setting.value : ""; font.family: shell.fontName; font.pixelSize: shell.pt(19) }
                                 Text {
                                     id: rowValue
                                     anchors.right: parent.right; anchors.rightMargin: shell.px(20); anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.min(Math.ceil(valueMetrics.advanceWidth) + 1, parent.width*0.5); elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
+                                    width: Math.min(Math.ceil(valueTwin.implicitWidth) + 1, parent.width*0.5); elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
                                     text: setting ? setting.value : ""; font.family: shell.fontName; font.pixelSize: shell.pt(19)
                                     color: chosen && shell.pane === 0 ? shell.theme.onFocus2 : shell.ink3
                                 }
                                 Text {
                                     id: rowName
                                     x: shell.px(20); anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.min(Math.ceil(nameMetrics.advanceWidth) + 1, parent.width - rowValue.width - shell.px(60))
+                                    width: Math.min(Math.ceil(nameTwin.implicitWidth) + 1, parent.width - rowValue.width - shell.px(60))
                                     elide: Text.ElideRight
                                     text: setting ? setting.title : ""; font.family: shell.fontName; font.pixelSize: shell.pt(22)
                                     color: chosen && shell.pane === 0 ? shell.theme.onFocus : shell.ink
