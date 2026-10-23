@@ -44,14 +44,14 @@ give it with `--home-key=CODE`.
 
 ## HOME right after a boot opens LG's Home (overlay)
 
-The Homebrew Channel runs its boot hooks some 40 s into a boot (on the
-tested B4 the TV shows its input from about 20 s, the hooks begin at
-about 37 s), and nothing of the launcher's runs before them. The
-launcher's hook is named to run among the first and starts Input Hook as
-its first step, so HOME reaches the panel a second or two after the hooks
-begin. A HOME before that opens LG's Home once; it is stopped when the
-stand-in takes its place a moment later, and the TV goes back to the
-input. A TV woken from standby does not boot, so this is only seen after a
+The Homebrew Channel runs its boot hooks some 35 s into a boot, and
+nothing of the launcher's runs before them. The launcher's hook is named to
+run among the first and starts Input Hook as its first step, so HOME
+reaches the panel a few seconds after the hooks begin: on the tested B4
+the TV shows its input from about 20 s, the hooks begin at 35 to 37 s and
+the first HOME that reached the panel came at 42 s. A HOME before that
+opens LG's Home once; it is stopped when the stand-in takes its place a
+moment later, and the TV goes back to the input. A TV woken from standby does not boot, so this is only seen after a
 power cut, a `reboot` or a firmware update. The boot log in `diagnose.sh`
 shows when each step ran.
 
