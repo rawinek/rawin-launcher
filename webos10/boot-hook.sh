@@ -7,16 +7,29 @@
 # to show it instead of starting qml-runner. Runs in the background and
 # retries while the Luna hub and services come up.
 #
-# The Homebrew Channel runs these hooks some 40 s into a boot, and the HOME
-# button reaches the launcher only once Input Hook's own hook (inputhook,
-# after this one) has started: a HOME before that opens LG's Home once.
-# Each step is noted in /tmp/rawin-launcher-boot.log with the seconds since
-# boot (diagnose.sh shows it; on webOS 10 logger lines do not reach
+# The Homebrew Channel runs these hooks (run-parts, in name order) some 40 s
+# into a boot; this one is named to run among the first. The HOME button
+# reaches the launcher once Input Hook's library is in the input processes,
+# which its service does as it loads, once per boot (/tmp/inputhook marks
+# it; its start method itself does nothing, so a later call, its own hook's
+# among them, changes nothing): any call to the service starts it, and this
+# hook makes that call first. A HOME before the hooks run opens LG's Home
+# once. Each step is noted in /tmp/rawin-launcher-boot.log with the seconds
+# since boot (diagnose.sh shows it; on webOS 10 logger lines do not reach
 # /var/log/messages).
 LOG=/tmp/rawin-launcher-boot.log
+INPUTHOOK=/media/developer/apps/usr/palm/services/org.webosbrew.inputhook.service
 log() { logger -t rawin-launcher "$1"; echo "$(cut -d' ' -f1 /proc/uptime)s $1" >>"$LOG"; }
 launch() { luna-send -n 1 luna://com.webos.applicationManager/launch "$1" 2>/dev/null | grep -q '"returnValue": *true'; }
 log 'boot hook started'
+if [ -d "$INPUTHOOK" ]; then
+  (
+    reply=$(luna-send -n 1 luna://org.webosbrew.inputhook.service/start '{}' 2>&1 | tr -d '\n' | cut -c1-80)
+    log "Input Hook: ${reply:-no answer}"
+  ) >/dev/null 2>&1 &
+else
+  log 'Input Hook is not installed: HOME stays with LG'
+fi
 (
   /bin/sh /var/lib/webosbrew/rawin-launcher-home/takeover.sh apply
 ) >/dev/null 2>&1 &

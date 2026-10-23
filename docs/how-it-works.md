@@ -41,9 +41,12 @@ app:
   with nothing drawn, which takes the app manager's loading spinner down,
   and hidden; the first HOME after a boot is then a show too, not a start of
   `qml-runner`. A preload that lands after a HOME has already started the
-  app changes nothing. The hooks run some 40 s into a boot, and
-  Input Hook's own hook starts after the launcher's: a HOME before then
-  opens LG's Home once (see
+  app changes nothing. The Homebrew Channel runs its hooks in name order
+  some 40 s into a boot; the launcher's is named to run among the first and
+  starts Input Hook's service as its first step (the service puts its
+  library into the input processes as it loads, once per boot), so HOME
+  reaches the launcher a second or two after the hooks begin. A HOME before
+  then opens LG's Home once (see
   [Troubleshooting](troubleshooting.md#home-right-after-a-boot-opens-lgs-home-overlay)).
   The boot hook and the stand-in note each step in
   `/tmp/rawin-launcher-boot.log` with the seconds since boot.
@@ -125,7 +128,7 @@ Overlay:
 | App and helper (developer app) | `org.rawin.launcher`, `org.rawin.launcher.service` |
 | Helper runs as root | Homebrew `elevate-service` role files for the service |
 | LG Home stand-in, its script, the uninstaller, the scripts (`update.sh`, `diagnose.sh`, `probe.sh` with `patch-home.js`), `backup.json` once made | `/var/lib/webosbrew/rawin-launcher-home/` |
-| Boot hook (stand-in mounted, helper started) | `/var/lib/webosbrew/init.d/77-rawin-launcher` |
+| Boot hook (Input Hook started, stand-in mounted, helper started, panel preloaded) | `/var/lib/webosbrew/init.d/10-rawin-launcher` (`77-rawin-launcher` up to 0.14.0) |
 | HOME button → launcher | Input Hook `keybinds.json`: the key pressed when the installer asked, else `773` (first copy kept as `keybinds.json.before-rawin-launcher`) |
 | Last input, BACK-hold target | `/var/lib/webosbrew/rawin-launcher-last-input`, `rawin-launcher-settings.json` |
 | Favourites and settings | the app's LocalStorage (database `rawinLauncher`) |

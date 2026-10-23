@@ -5,7 +5,7 @@ BASE=/var/lib/webosbrew/rawin-launcher-home
 KEYS=/home/root/.config/lginputhook/keybinds.json
 
 [ -f "$BASE/takeover.sh" ] && sh "$BASE/takeover.sh" restore >/dev/null 2>&1
-rm -f /var/lib/webosbrew/init.d/77-rawin-launcher
+rm -f /var/lib/webosbrew/init.d/10-rawin-launcher /var/lib/webosbrew/init.d/77-rawin-launcher
 
 # HOME back to LG: drop our key, keep any other bindings.
 if [ -f "$KEYS" ]; then

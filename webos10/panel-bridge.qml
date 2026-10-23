@@ -36,10 +36,26 @@
             });
         }
     }
+    // The helper can be a moment behind the panel: a HOME in the second
+    // between Input Hook and the helper coming up after a boot, or an update
+    // replacing the helper. A failed app list is asked for again every 1.5 s,
+    // up to ten times in a row, while the panel is up.
+    Timer {
+        id: helperRetry
+        interval: 1500
+        property int left: 10
+        onTriggered: if (shell.foreground) { catalog.callService({}); loadInputs(); }
+    }
+    function helperMissing() {
+        if (helperRetry.running || helperRetry.left <= 0) return;
+        helperRetry.left--;
+        helperRetry.restart();
+    }
     QtObject {
         id: catalog
         function callService(p) {
             shell.http("/apps", function(r) {
+                helperRetry.left = 10;
                 if (!r.apps) return;
                 var next = [];
                 for (var i=0; i<r.apps.length; i++) {
@@ -50,7 +66,7 @@
                 if (same(next, applications)) return;
                 applications = next;
                 if (page === "apps") selected = Math.max(0, Math.min(selected, apps.length-1));
-            });
+            }, helperMissing);
         }
     }
     // The TV's language and the BACK-hold target go through the helper too.

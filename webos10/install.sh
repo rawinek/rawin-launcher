@@ -15,7 +15,7 @@ SERVICE=$APP.service
 APPDIR=/media/developer/apps/usr/palm/applications/$APP
 HBC=/media/developer/apps/usr/palm/services/org.webosbrew.hbchannel.service
 BASE=/var/lib/webosbrew/rawin-launcher-home
-HOOK=/var/lib/webosbrew/init.d/77-rawin-launcher
+HOOK=/var/lib/webosbrew/init.d/10-rawin-launcher   # before Glasshouse's 20-/50-tvweb hooks
 KEYS=/home/root/.config/lginputhook/keybinds.json
 HOME_KEY=773   # the remote's HOME button as Input Hook reports it
 
@@ -125,6 +125,7 @@ k[process.argv[2]] = {action: "launch", id: "org.rawin.launcher"};
 fs.writeFileSync(f, JSON.stringify(k));' "$KEYS" "$HOME_KEY"
 
 mkdir -p /var/lib/webosbrew/init.d
+rm -f /var/lib/webosbrew/init.d/77-rawin-launcher   # the hook's name up to 0.14.0
 cp "$HERE/boot-hook.sh" "$HOOK"
 chmod 755 "$HOOK"
 sh "$HOOK"
