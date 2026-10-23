@@ -21,7 +21,13 @@ WebOSWindow {
     width: smallScreen ? Screen.width : 1920
     height: smallScreen ? Screen.height : 1080
     property var launchParams: typeof params !== "undefined" ? params : null
-    readonly property bool preloaded: launchParams !== null && launchParams !== undefined && launchParams.preload === true
+    // Whether the process was started hidden: read once from the launch that
+    // started it, then a plain value. The boot hook's preload can land after
+    // a HOME already started the app (right after a boot), and must not hide
+    // a panel that is up.
+    property bool preloaded: isPreload(launchParams)
+    function isPreload(p) { return p !== null && p !== undefined && p.preload === true; }
+    Component.onCompleted: preloaded = isPreload(launchParams)   // ends the binding
     visible: !preloaded
     color: "transparent"
     appId: "org.rawin.launcher"
@@ -30,7 +36,7 @@ WebOSWindow {
     // Each launch: HOME while the panel is up hides it, otherwise shows it;
     // the boot hook's preload only makes sure the process is there.
     onLaunchParamsChanged: {
-        if (launchParams && launchParams.preload) return;
+        if (isPreload(launchParams)) return;
         if (win.visible && home.foreground) hide(); else show();
     }
 

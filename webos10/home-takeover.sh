@@ -16,6 +16,9 @@ HOMEAPP=/usr/palm/applications/com.webos.app.home
 BASE=/var/lib/webosbrew/rawin-launcher-home
 STAGE=$BASE/app
 TAG=rawin-launcher
+# The system log and, with the seconds since boot, the launcher's boot log
+# (cleared with /tmp at every boot; diagnose.sh shows it).
+log() { logger -t $TAG "$1"; echo "$(cut -d' ' -f1 /proc/uptime)s $1" >>/tmp/rawin-launcher-boot.log; }
 
 inode() { ls -di "$1" 2>/dev/null | awk '{print $1}'; }
 mounted() { [ -n "$(inode "$STAGE")" ] && [ "$(inode "$HOMEAPP")" = "$(inode "$STAGE")" ]; }
@@ -61,19 +64,20 @@ case "$1" in
     # Installed with --keep-lg-home: LG's Home stays.
     [ -e "$BASE/keep-lg-home" ] && exit 0
     if grep -q '"enabled"[[:space:]]*:[[:space:]]*true' /var/lib/tvweb/home.json 2>/dev/null; then
-      logger -t $TAG 'Glasshouse Home is on: LG Home left to it'
+      log 'Glasshouse Home is on: LG Home left to it'
       exit 0
     fi
     # sam answers only once it is up (at boot this hook runs early).
     for _ in $(seq 60); do luna getAppInfo '{"id":"com.webos.app.home"}' | ok && break; sleep 2; done
-    mounted || mount --bind "$STAGE" "$HOMEAPP" || { logger -t $TAG 'mount failed: LG Home kept'; exit 1; }
+    log 'stand-in: app manager up'
+    mounted || mount --bind "$STAGE" "$HOMEAPP" || { log 'mount failed: LG Home kept'; exit 1; }
     if reread && home_type_is web; then
       for pid in $(lg_home_pids); do kill "$pid" 2>/dev/null; done
-      logger -t $TAG 'black stand-in in LG Home place'
+      log 'black stand-in in LG Home place'
     else
       umount "$HOMEAPP" 2>/dev/null
       reread
-      logger -t $TAG 'sam did not take the stand-in: LG Home kept'
+      log 'sam did not take the stand-in: LG Home kept'
       exit 1
     fi
     ;;
@@ -85,7 +89,7 @@ case "$1" in
     # the running Home and every launch of Home waits on it. Close it there.
     luna-send -n 1 luna://com.webos.service.webappmanager/killApp '{"appId":"com.webos.app.home"}' </dev/null >/dev/null 2>&1
     luna closeByAppId '{"id":"com.webos.app.home"}' >/dev/null
-    logger -t $TAG 'LG Home given back'
+    log 'LG Home given back'
     ;;
   status)
     if mounted; then echo "stand-in mounted"; else echo "LG Home"; fi

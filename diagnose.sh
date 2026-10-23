@@ -4,8 +4,8 @@
 # /tmp/rawin-launcher-diagnose.txt, to attach to a GitHub issue. It holds the
 # TV model, webOS and firmware versions, which variant fits (probe.sh next to
 # this script), what is installed and what the launcher sees (apps, HDMI
-# inputs and the device names on them), and the launcher's lines from the
-# system log; no IP addresses, serial numbers or accounts.
+# inputs and the device names on them), the launcher's boot log and its lines
+# from the system log; no IP addresses, serial numbers or accounts.
 OUT=/tmp/rawin-launcher-diagnose.txt
 HELPER=http://127.0.0.1:8899
 APPS=/media/developer/apps/usr/palm/applications
@@ -80,6 +80,11 @@ or_note() { out=$("$@" 2>/dev/null); if [ -n "$out" ]; then echo "$out"; else ec
     echo
     for f in /tmp/lginput-hook-*.log; do [ -f "$f" ] && { echo "-- $f"; grep -v 'Keybinds reloaded' "$f" | tail -n 8; }; done
 
+    # The boot hooks note each step with the seconds since boot; the file is
+    # cleared with /tmp at every boot.
+    section "Boot log ($(cut -d' ' -f1 /proc/uptime)s since boot)"
+    show /tmp/rawin-launcher-boot.log
+
     section "Install and update logs"
     for f in /tmp/rawin-launcher-install.log /tmp/rawin-launcher-update/install.log; do
         [ -f "$f" ] && { echo "-- $f"; tail -n 30 "$f"; }
@@ -95,7 +100,7 @@ or_note() { out=$("$@" 2>/dev/null); if [ -n "$out" ]; then echo "$out"; else ec
 
     # The launcher's own messages and errors, not the list of launched apps.
     section "System log (rawin-launcher lines)"
-    NOTE="(none in /var/log/messages)"
+    NOTE="(none in /var/log/messages; on webOS 10 logger lines do not reach it: see Boot log)"
     or_note sh -c "cat /var/log/messages* 2>/dev/null | grep -i -E 'rawin' | grep -v -E 'NL_(VSC|SOUND|APP_LAUNCH_BEGIN|APP_INSTALLED)' | tail -n 40"
 } >"$OUT" 2>&1
 

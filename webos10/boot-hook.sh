@@ -6,6 +6,16 @@
 # started hidden ({"preload": true}), so the first HOME after a boot only has
 # to show it instead of starting qml-runner. Runs in the background and
 # retries while the Luna hub and services come up.
+#
+# The Homebrew Channel runs these hooks some 40 s into a boot, and the HOME
+# button reaches the launcher only once Input Hook's own hook (inputhook,
+# after this one) has started: a HOME before that opens LG's Home once.
+# Each step is noted in /tmp/rawin-launcher-boot.log with the seconds since
+# boot (diagnose.sh shows it; on webOS 10 logger lines do not reach
+# /var/log/messages).
+LOG=/tmp/rawin-launcher-boot.log
+log() { logger -t rawin-launcher "$1"; echo "$(cut -d' ' -f1 /proc/uptime)s $1" >>"$LOG"; }
+log 'boot hook started'
 (
   /bin/sh /var/lib/webosbrew/rawin-launcher-home/takeover.sh apply
 ) >/dev/null 2>&1 &
@@ -13,14 +23,16 @@
   n=0
   while [ $n -lt 40 ]; do
     if luna-send -n 1 luna://org.rawin.launcher.service/ping '{}' 2>/dev/null | grep -q '"http"'; then
-      logger -t rawin-launcher 'helper started'
-      sleep 5
-      luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"org.rawin.launcher","params":{"preload":true}}' >/dev/null 2>&1 &&
-        logger -t rawin-launcher 'panel preloaded'
+      log 'helper started'
+      if luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"org.rawin.launcher","params":{"preload":true}}' 2>/dev/null | grep -q '"returnValue": *true'; then
+        log 'panel preloaded'
+      else
+        log 'panel not preloaded (the launch failed); the first HOME starts it'
+      fi
       exit 0
     fi
     n=$((n + 1))
     sleep 3
   done
-  logger -t rawin-launcher 'helper did not start'
+  log 'helper did not start'
 ) >/dev/null 2>&1 &

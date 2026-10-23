@@ -37,7 +37,13 @@ app:
   window but keeps the process, so the next HOME only has to show it. The
   boot hook starts the app hidden once the helper is up (a launch with
   `{"preload": true}`), so the first HOME after a boot is a show too, not a
-  start of `qml-runner`.
+  start of `qml-runner`. A preload that lands after a HOME has already
+  started the app changes nothing. The hooks run some 40 s into a boot, and
+  Input Hook's own hook starts after the launcher's: a HOME before then
+  opens LG's Home once (see
+  [Troubleshooting](troubleshooting.md#home-right-after-a-boot-opens-lgs-home-overlay)).
+  The boot hook and the stand-in note each step in
+  `/tmp/rawin-launcher-boot.log` with the seconds since boot.
 - `org.rawin.launcher.service`: a Node service in the same package, given root
   with the Homebrew Channel's `elevate-service`. webOS 10 answers no Luna calls
   from a developer QML app, so the helper lists apps and inputs, launches apps

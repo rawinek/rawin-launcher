@@ -2,6 +2,7 @@
 
 - [Diagnose](#diagnose)
 - [HOME does nothing (overlay)](#home-does-nothing-overlay)
+- [HOME right after a boot opens LG's Home (overlay)](#home-right-after-a-boot-opens-lgs-home-overlay)
 - [An update fails](#an-update-fails)
 - [An untested webOS](#an-untested-webos)
 - [Getting LG's Home back](#getting-lgs-home-back)
@@ -20,8 +21,9 @@ It writes `/tmp/rawin-launcher-diagnose.txt`: the TV model, webOS and firmware
 versions, whether the screen is UHD, which variant fits (`probe.sh`, next to
 `diagnose.sh` in the release and in the installed copy), what is installed
 and whether the patched Home QML is in place, what the launcher sees (apps,
-inputs with their device names, the app on screen), the HOME button binding
-and the launcher's lines from the logs. No IP addresses, serial numbers or
+inputs with their device names, the app on screen), the HOME button binding,
+the boot log (`/tmp/rawin-launcher-boot.log`: what the boot hook did, with the
+seconds since boot) and the launcher's lines from the system log. No IP addresses, serial numbers or
 accounts. Copy it to a computer with
 `ssh root@<tv-ip> cat /tmp/rawin-launcher-diagnose.txt > diagnose.txt`
 and attach it to an [issue](https://github.com/rawinek/webos-homebar/issues).
@@ -39,6 +41,16 @@ nothing, run the installer again from a terminal with
 `sh install.sh --overlay --home-key=ask` and press HOME when asked, or read
 the code from Input Hook's log (`/tmp/lginput-hook-*.log`) after a press and
 give it with `--home-key=CODE`.
+
+## HOME right after a boot opens LG's Home (overlay)
+
+The Homebrew Channel runs its boot hooks some 40 s into a boot, and the HOME
+button reaches the launcher only once Input Hook's own hook (`inputhook`,
+run after the launcher's) has started: on the tested B4 the first HOME that
+reached the panel came about 50 s after power-on. A HOME before that opens
+LG's Home once; it is stopped when the stand-in takes its place a moment
+later. Nothing from the hooks can catch an earlier press. The boot log in
+`diagnose.sh` shows when each step ran.
 
 ## An update fails
 
@@ -69,7 +81,8 @@ was never tested:
 - **Overlay: the panel is empty or says the helper is not answering.**
   `luna-send -n 1 luna://org.rawin.launcher.service/ping '{}'` and
   `wget -q -O - http://127.0.0.1:8899/ping` show whether the helper runs;
-  its errors are in the system log under `rawin-launcher`.
+  `diagnose.sh` has its answers and its event list, and the boot log says
+  whether the boot hook found it.
 - **Overlay with `--replace-lg-home`: the app manager does not take the
   stand-in.** The script unmounts it and leaves LG's Home; nothing is lost.
 

@@ -6,6 +6,9 @@
 # hook gives LG's Home back.
 set -eu
 base=/var/lib/webosbrew/rawin-launcher
+# The system log and, with the seconds since boot, the launcher's boot log
+# (cleared with /tmp at every boot; diagnose.sh shows it).
+log() { logger -t rawin-launcher "$1"; echo "$(cut -d' ' -f1 /proc/uptime)s $1" >>/tmp/rawin-launcher-boot.log; }
 root=/usr/palm/applications/com.webos.app.home/qml
 main=$root/main.qml
 ctrl=$root/Controllers/UIController.qml
@@ -16,7 +19,7 @@ mount_patched() {
     target=$1; ours=$2; original=$3
     cmp -s "$target" "$ours" && return 0
     if ! cmp -s "$target" "$original"; then
-        logger -t rawin-launcher "LG Home changed ($target); original Home kept"
+        log "LG Home changed ($target); original Home kept"
         return 1
     fi
     mount -o bind "$ours" "$target"
@@ -39,4 +42,4 @@ done
 
 # Stop Home only; the next HOME starts it with the patched QML.
 for pid in $(pidof com.webos.app.home || true); do kill -KILL "$pid" || true; done
-logger -t rawin-launcher 'panel applied to LG Home'
+log 'panel applied to LG Home'

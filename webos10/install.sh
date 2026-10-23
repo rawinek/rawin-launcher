@@ -47,6 +47,7 @@ IPK=$(ls "$HERE"/org.rawin.launcher_*_all.ipk 2>/dev/null | head -n 1)
 say "installing $(basename "$IPK")"
 cp "$IPK" /tmp/rawin-launcher.ipk
 LOG=/tmp/rawin-launcher-install.log
+: >"$LOG"   # before the loop below reads it
 luna-send -i -a com.webos.appInstallService luna://com.webos.appInstallService/dev/install \
     '{"id":"org.rawin.launcher","ipkUrl":"/tmp/rawin-launcher.ipk","subscribe":true}' </dev/null >"$LOG" 2>&1 &
 PID=$!
