@@ -1,6 +1,6 @@
 .pragma library
 // Homebar texts. English is the fallback for a missing language or key.
-// "{n}", "{lang}" and "{version}" are filled in by format().
+// "{n}", "{lang}", "{version}", "{date}" and "{name}" are filled in by format().
 var languages = ["en", "es", "de", "pl", "fr", "it", "pt", "nl", "cs"];
 var names = {en: "English", es: "Español", de: "Deutsch", pl: "Polski", fr: "Français", it: "Italiano",
              pt: "Português", nl: "Nederlands", cs: "Čeština"};
@@ -41,7 +41,15 @@ var table = {
         theme_midnight: "Midnight", theme_sky: "Sky", theme_terracotta: "Terracotta",
         theme_cherry: "Cherry", theme_cobalt: "Cobalt", theme_violet: "Violet", theme_indigo: "Indigo",
         val_system: "System language ({lang})", val_last_input: "Last input",
-        val_show: "Shown", val_hide: "Hidden"
+        val_show: "Shown", val_hide: "Hidden",
+        set_size: "Text size", val_size_normal: "Normal", val_size_large: "Large", val_size_larger: "Larger", set_motion: "Animations",
+        set_sort: "Apps order", val_sort_lg: "The TV's order", val_sort_az: "A to Z", val_sort_used: "Most used first",
+        set_recent: "Recent apps on Home", recent_sub: "Recently opened · hold OK to add to favourites", set_tv: "Live TV on Home",
+        set_hidden: "Hidden apps and inputs", val_hidden_hide: "Hidden", val_hidden_show: "Shown dimmed", hidden_sub: "Hidden",
+        hidden_app: "Hidden from Apps", unhidden_app: "Shown in Apps again", hidden_input: "Hidden from the home row", unhidden_input: "Shown on the home row again",
+        hint_hide: "hide", hint_unhide: "show again", key_red: "RED", hint_choose: "choose", hint_back_target: "use after holding BACK", exit_set: "After holding BACK: {name}",
+        set_backup: "Back up favourites and settings", set_restore: "Restore from the backup", bak_none: "No backup yet", bak_saved: "Backup from {date}", bak_done: "Backed up", bak_restored: "Restored from the backup",
+        bak_err: "Could not write the backup.", bak_err_read: "Could not read the backup.", hint_backup: "back up", hint_restore: "restore"
     },
     es: {
         set_update: "Actualizaciones", set_beta: "Versiones de prueba", val_on: "Sí", val_off: "No",
@@ -79,7 +87,15 @@ var table = {
         theme_midnight: "Medianoche", theme_sky: "Cielo", theme_terracotta: "Terracota",
         theme_cherry: "Cereza", theme_cobalt: "Cobalto", theme_violet: "Violeta", theme_indigo: "Índigo",
         val_system: "Idioma del sistema ({lang})", val_last_input: "Última entrada",
-        val_show: "Visible", val_hide: "Oculta"
+        val_show: "Visible", val_hide: "Oculta",
+        set_size: "Tamaño del texto", val_size_normal: "Normal", val_size_large: "Grande", val_size_larger: "Más grande", set_motion: "Animaciones",
+        set_sort: "Orden de las aplicaciones", val_sort_lg: "Orden del TV", val_sort_az: "De la A a la Z", val_sort_used: "Más usadas primero",
+        set_recent: "Apps recientes en inicio", recent_sub: "Abierta hace poco · mantén OK para añadir a favoritos", set_tv: "Televisión en inicio",
+        set_hidden: "Apps y entradas ocultas", val_hidden_hide: "Ocultas", val_hidden_show: "Visibles, atenuadas", hidden_sub: "Oculta",
+        hidden_app: "Oculta de Aplicaciones", unhidden_app: "Visible de nuevo en Aplicaciones", hidden_input: "Oculta de la fila de inicio", unhidden_input: "De nuevo en la fila de inicio",
+        hint_hide: "ocultar", hint_unhide: "mostrar de nuevo", key_red: "ROJO", hint_choose: "elegir", hint_back_target: "usar al mantener ATRÁS", exit_set: "Al mantener ATRÁS: {name}",
+        set_backup: "Copia de favoritos y ajustes", set_restore: "Restaurar la copia", bak_none: "Sin copia todavía", bak_saved: "Copia del {date}", bak_done: "Copia guardada", bak_restored: "Restaurado de la copia",
+        bak_err: "No se pudo guardar la copia.", bak_err_read: "No se pudo leer la copia.", hint_backup: "guardar copia", hint_restore: "restaurar"
     },
     de: {
         set_update: "Updates", set_beta: "Testversionen", val_on: "An", val_off: "Aus",
@@ -117,7 +133,15 @@ var table = {
         theme_midnight: "Mitternacht", theme_sky: "Himmel", theme_terracotta: "Terrakotta",
         theme_cherry: "Kirsche", theme_cobalt: "Kobalt", theme_violet: "Violett", theme_indigo: "Indigo",
         val_system: "Systemsprache ({lang})", val_last_input: "Letzter Eingang",
-        val_show: "Sichtbar", val_hide: "Ausgeblendet"
+        val_show: "Sichtbar", val_hide: "Ausgeblendet",
+        set_size: "Textgröße", val_size_normal: "Normal", val_size_large: "Groß", val_size_larger: "Größer", set_motion: "Animationen",
+        set_sort: "Reihenfolge der Apps", val_sort_lg: "Reihenfolge des TVs", val_sort_az: "A bis Z", val_sort_used: "Meistgenutzte zuerst",
+        set_recent: "Zuletzt genutzte Apps auf Home", recent_sub: "Zuletzt geöffnet · OK halten, um zu den Favoriten hinzuzufügen", set_tv: "Fernsehen auf Home",
+        set_hidden: "Ausgeblendete Apps und Eingänge", val_hidden_hide: "Ausgeblendet", val_hidden_show: "Abgedunkelt sichtbar", hidden_sub: "Ausgeblendet",
+        hidden_app: "In Apps ausgeblendet", unhidden_app: "In Apps wieder sichtbar", hidden_input: "Aus der Home-Reihe ausgeblendet", unhidden_input: "Wieder in der Home-Reihe",
+        hint_hide: "ausblenden", hint_unhide: "wieder anzeigen", key_red: "ROT", hint_choose: "wählen", hint_back_target: "nach langem ZURÜCK öffnen", exit_set: "Nach langem ZURÜCK: {name}",
+        set_backup: "Favoriten und Einstellungen sichern", set_restore: "Aus der Sicherung wiederherstellen", bak_none: "Noch keine Sicherung", bak_saved: "Sicherung vom {date}", bak_done: "Gesichert", bak_restored: "Aus der Sicherung wiederhergestellt",
+        bak_err: "Die Sicherung konnte nicht geschrieben werden.", bak_err_read: "Die Sicherung konnte nicht gelesen werden.", hint_backup: "sichern", hint_restore: "wiederherstellen"
     },
     pl: {
         set_update: "Aktualizacje", set_beta: "Wersje testowe", val_on: "Włączone", val_off: "Wyłączone",
@@ -155,7 +179,15 @@ var table = {
         theme_midnight: "Północ", theme_sky: "Niebo", theme_terracotta: "Terakota",
         theme_cherry: "Wiśnia", theme_cobalt: "Kobalt", theme_violet: "Fiolet", theme_indigo: "Indygo",
         val_system: "Język systemu ({lang})", val_last_input: "Ostatnie wejście",
-        val_show: "Widoczny", val_hide: "Ukryty"
+        val_show: "Widoczny", val_hide: "Ukryty",
+        set_size: "Rozmiar tekstu", val_size_normal: "Normalny", val_size_large: "Duży", val_size_larger: "Większy", set_motion: "Animacje",
+        set_sort: "Kolejność aplikacji", val_sort_lg: "Kolejność z TV", val_sort_az: "A do Z", val_sort_used: "Najczęściej używane",
+        set_recent: "Ostatnie aplikacje na ekranie głównym", recent_sub: "Ostatnio otwarte · przytrzymaj OK, aby dodać do ulubionych", set_tv: "Telewizja na ekranie głównym",
+        set_hidden: "Ukryte aplikacje i wejścia", val_hidden_hide: "Ukryte", val_hidden_show: "Pokazane przyciemnione", hidden_sub: "Ukryte",
+        hidden_app: "Ukryte w Aplikacjach", unhidden_app: "Znów widoczne w Aplikacjach", hidden_input: "Ukryte z paska", unhidden_input: "Znów na pasku",
+        hint_hide: "ukryj", hint_unhide: "pokaż ponownie", key_red: "CZERWONY", hint_choose: "wybierz", hint_back_target: "cel po przytrzymaniu WSTECZ", exit_set: "Po przytrzymaniu WSTECZ: {name}",
+        set_backup: "Kopia ulubionych i ustawień", set_restore: "Przywróć z kopii", bak_none: "Brak kopii", bak_saved: "Kopia z {date}", bak_done: "Kopia zapisana", bak_restored: "Przywrócono z kopii",
+        bak_err: "Nie udało się zapisać kopii.", bak_err_read: "Nie udało się odczytać kopii.", hint_backup: "zapisz kopię", hint_restore: "przywróć"
     },
     fr: {
         set_update: "Mises à jour", set_beta: "Versions de test", val_on: "Activé", val_off: "Désactivé",
@@ -193,7 +225,15 @@ var table = {
         theme_midnight: "Minuit", theme_sky: "Ciel", theme_terracotta: "Terre cuite",
         theme_cherry: "Cerise", theme_cobalt: "Cobalt", theme_violet: "Violet", theme_indigo: "Indigo",
         val_system: "Langue du système ({lang})", val_last_input: "Dernière entrée",
-        val_show: "Affichée", val_hide: "Masquée"
+        val_show: "Affichée", val_hide: "Masquée",
+        set_size: "Taille du texte", val_size_normal: "Normale", val_size_large: "Grande", val_size_larger: "Plus grande", set_motion: "Animations",
+        set_sort: "Ordre des applications", val_sort_lg: "Ordre du téléviseur", val_sort_az: "De A à Z", val_sort_used: "Les plus utilisées d'abord",
+        set_recent: "Applications récentes sur l'accueil", recent_sub: "Ouverte récemment · maintenez OK pour l'ajouter aux favoris", set_tv: "Télévision sur l'accueil",
+        set_hidden: "Applications et entrées masquées", val_hidden_hide: "Masquées", val_hidden_show: "Visibles, atténuées", hidden_sub: "Masquée",
+        hidden_app: "Masquée des Applications", unhidden_app: "De nouveau dans les Applications", hidden_input: "Masquée de la rangée d'accueil", unhidden_input: "De retour sur la rangée d'accueil",
+        hint_hide: "masquer", hint_unhide: "afficher à nouveau", key_red: "ROUGE", hint_choose: "choisir", hint_back_target: "ouvrir après un appui long sur RETOUR", exit_set: "Après un appui long sur RETOUR : {name}",
+        set_backup: "Sauvegarder les favoris et les réglages", set_restore: "Restaurer la sauvegarde", bak_none: "Pas encore de sauvegarde", bak_saved: "Sauvegarde du {date}", bak_done: "Sauvegardé", bak_restored: "Restauré depuis la sauvegarde",
+        bak_err: "Impossible d'écrire la sauvegarde.", bak_err_read: "Impossible de lire la sauvegarde.", hint_backup: "sauvegarder", hint_restore: "restaurer"
     },
     it: {
         set_update: "Aggiornamenti", set_beta: "Versioni di prova", val_on: "Attive", val_off: "Disattivate",
@@ -231,7 +271,15 @@ var table = {
         theme_midnight: "Mezzanotte", theme_sky: "Cielo", theme_terracotta: "Terracotta",
         theme_cherry: "Ciliegia", theme_cobalt: "Cobalto", theme_violet: "Viola", theme_indigo: "Indaco",
         val_system: "Lingua di sistema ({lang})", val_last_input: "Ultimo ingresso",
-        val_show: "Visibile", val_hide: "Nascosta"
+        val_show: "Visibile", val_hide: "Nascosta",
+        set_size: "Dimensione del testo", val_size_normal: "Normale", val_size_large: "Grande", val_size_larger: "Più grande", set_motion: "Animazioni",
+        set_sort: "Ordine delle app", val_sort_lg: "Ordine del TV", val_sort_az: "Dalla A alla Z", val_sort_used: "Più usate per prime",
+        set_recent: "App recenti nella home", recent_sub: "Aperta di recente · tieni premuto OK per aggiungerla ai preferiti", set_tv: "TV in diretta nella home",
+        set_hidden: "App e ingressi nascosti", val_hidden_hide: "Nascosti", val_hidden_show: "Visibili, attenuati", hidden_sub: "Nascosta",
+        hidden_app: "Nascosta dalle App", unhidden_app: "Di nuovo nelle App", hidden_input: "Nascosto dalla riga della home", unhidden_input: "Di nuovo nella riga della home",
+        hint_hide: "nascondi", hint_unhide: "mostra di nuovo", key_red: "ROSSO", hint_choose: "scegli", hint_back_target: "apri dopo INDIETRO tenuto premuto", exit_set: "Dopo INDIETRO tenuto premuto: {name}",
+        set_backup: "Backup di preferiti e impostazioni", set_restore: "Ripristina dal backup", bak_none: "Nessun backup", bak_saved: "Backup del {date}", bak_done: "Backup salvato", bak_restored: "Ripristinato dal backup",
+        bak_err: "Impossibile scrivere il backup.", bak_err_read: "Impossibile leggere il backup.", hint_backup: "salva backup", hint_restore: "ripristina"
     },
     pt: {
         set_update: "Atualizações", set_beta: "Versões de teste", val_on: "Ativadas", val_off: "Desativadas",
@@ -269,7 +317,15 @@ var table = {
         theme_midnight: "Meia-noite", theme_sky: "Céu", theme_terracotta: "Terracota",
         theme_cherry: "Cereja", theme_cobalt: "Cobalto", theme_violet: "Violeta", theme_indigo: "Índigo",
         val_system: "Idioma do sistema ({lang})", val_last_input: "Última entrada",
-        val_show: "Visível", val_hide: "Oculta"
+        val_show: "Visível", val_hide: "Oculta",
+        set_size: "Tamanho do texto", val_size_normal: "Normal", val_size_large: "Grande", val_size_larger: "Maior", set_motion: "Animações",
+        set_sort: "Ordem das aplicações", val_sort_lg: "Ordem da TV", val_sort_az: "De A a Z", val_sort_used: "Mais usadas primeiro",
+        set_recent: "Apps recentes no início", recent_sub: "Aberta recentemente · mantenha OK para adicionar aos favoritos", set_tv: "Televisão no início",
+        set_hidden: "Apps e entradas ocultas", val_hidden_hide: "Ocultas", val_hidden_show: "Visíveis, esbatidas", hidden_sub: "Oculta",
+        hidden_app: "Oculta das Aplicações", unhidden_app: "De novo nas Aplicações", hidden_input: "Oculta da fila inicial", unhidden_input: "De volta à fila inicial",
+        hint_hide: "ocultar", hint_unhide: "mostrar de novo", key_red: "VERMELHO", hint_choose: "escolher", hint_back_target: "abrir ao manter RETROCEDER", exit_set: "Ao manter RETROCEDER: {name}",
+        set_backup: "Cópia de favoritos e definições", set_restore: "Restaurar da cópia", bak_none: "Ainda sem cópia", bak_saved: "Cópia de {date}", bak_done: "Cópia guardada", bak_restored: "Restaurado da cópia",
+        bak_err: "Não foi possível guardar a cópia.", bak_err_read: "Não foi possível ler a cópia.", hint_backup: "guardar cópia", hint_restore: "restaurar"
     },
     nl: {
         set_update: "Updates", set_beta: "Testversies", val_on: "Aan", val_off: "Uit",
@@ -307,7 +363,15 @@ var table = {
         theme_midnight: "Middernacht", theme_sky: "Hemel", theme_terracotta: "Terracotta",
         theme_cherry: "Kers", theme_cobalt: "Kobalt", theme_violet: "Violet", theme_indigo: "Indigo",
         val_system: "Systeemtaal ({lang})", val_last_input: "Laatste ingang",
-        val_show: "Zichtbaar", val_hide: "Verborgen"
+        val_show: "Zichtbaar", val_hide: "Verborgen",
+        set_size: "Tekstgrootte", val_size_normal: "Normaal", val_size_large: "Groot", val_size_larger: "Groter", set_motion: "Animaties",
+        set_sort: "Volgorde van apps", val_sort_lg: "Volgorde van de tv", val_sort_az: "A tot Z", val_sort_used: "Meest gebruikt eerst",
+        set_recent: "Recente apps op Home", recent_sub: "Onlangs geopend · houd OK ingedrukt om toe te voegen aan favorieten", set_tv: "Live tv op Home",
+        set_hidden: "Verborgen apps en ingangen", val_hidden_hide: "Verborgen", val_hidden_show: "Gedimd zichtbaar", hidden_sub: "Verborgen",
+        hidden_app: "Verborgen in Apps", unhidden_app: "Weer zichtbaar in Apps", hidden_input: "Verborgen van de Home-rij", unhidden_input: "Weer op de Home-rij",
+        hint_hide: "verbergen", hint_unhide: "weer tonen", key_red: "ROOD", hint_choose: "kiezen", hint_back_target: "openen na lang TERUG", exit_set: "Na lang TERUG: {name}",
+        set_backup: "Back-up van favorieten en instellingen", set_restore: "Terugzetten uit de back-up", bak_none: "Nog geen back-up", bak_saved: "Back-up van {date}", bak_done: "Back-up gemaakt", bak_restored: "Teruggezet uit de back-up",
+        bak_err: "De back-up kon niet worden geschreven.", bak_err_read: "De back-up kon niet worden gelezen.", hint_backup: "back-up maken", hint_restore: "terugzetten"
     },
     cs: {
         set_update: "Aktualizace", set_beta: "Testovací verze", val_on: "Zapnuto", val_off: "Vypnuto",
@@ -345,7 +409,15 @@ var table = {
         theme_midnight: "Půlnoc", theme_sky: "Obloha", theme_terracotta: "Terakota",
         theme_cherry: "Třešeň", theme_cobalt: "Kobalt", theme_violet: "Fialová", theme_indigo: "Indigo",
         val_system: "Jazyk systému ({lang})", val_last_input: "Poslední vstup",
-        val_show: "Zobrazená", val_hide: "Skrytá"
+        val_show: "Zobrazená", val_hide: "Skrytá",
+        set_size: "Velikost textu", val_size_normal: "Normální", val_size_large: "Velký", val_size_larger: "Větší", set_motion: "Animace",
+        set_sort: "Pořadí aplikací", val_sort_lg: "Pořadí z televize", val_sort_az: "A až Z", val_sort_used: "Nejpoužívanější první",
+        set_recent: "Nedávné aplikace na domovské liště", recent_sub: "Nedávno otevřeno · podržením OK přidáte do oblíbených", set_tv: "Televize na domovské liště",
+        set_hidden: "Skryté aplikace a vstupy", val_hidden_hide: "Skryté", val_hidden_show: "Zobrazené ztlumeně", hidden_sub: "Skryté",
+        hidden_app: "Skryto v Aplikacích", unhidden_app: "Znovu v Aplikacích", hidden_input: "Skryto z domovské lišty", unhidden_input: "Znovu na domovské liště",
+        hint_hide: "skrýt", hint_unhide: "znovu zobrazit", key_red: "ČERVENÉ", hint_choose: "vybrat", hint_back_target: "otevřít po podržení ZPĚT", exit_set: "Po podržení ZPĚT: {name}",
+        set_backup: "Záloha oblíbených a nastavení", set_restore: "Obnovit ze zálohy", bak_none: "Zatím žádná záloha", bak_saved: "Záloha z {date}", bak_done: "Zálohováno", bak_restored: "Obnoveno ze zálohy",
+        bak_err: "Zálohu se nepodařilo zapsat.", bak_err_read: "Zálohu se nepodařilo přečíst.", hint_backup: "zálohovat", hint_restore: "obnovit"
     }
 };
 // "pl-PL", "pl_PL" or "pl" → "pl" when supported, else "".

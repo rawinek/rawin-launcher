@@ -4,13 +4,16 @@
 The panel lays itself out for the size it gets: 1920x1080 on FHD and UHD
 TVs, 1280x720 on HD ones. This renders a set of scenes at a size, so a
 change can be checked at every size without a TV: Home with seven
-favourites and long HDMI-CEC names, a favourite focused, Apps, System,
-the settings, no favourites, and a set with two inputs.
+favourites and long HDMI-CEC names, a favourite focused, recent apps and
+Live TV on the rail, hidden inputs and apps, Apps in each order, System with
+an update waiting, the settings and a setting's values, the larger text
+size, no favourites, and a set with two inputs.
 
 Usage: tools/render-panel.py [--size 1920x1080] [--out dist/render] [--theme default]
 Needs Python 3 with PySide6 (pip install PySide6) and a display (or Xvfb);
 not the TV. The webOS-only parts of the panel are stubbed out, as in
-render-themes.py.
+render-themes.py; the icons are plain coloured squares, so the glow read
+from them is their colour.
 """
 import argparse
 import json
@@ -48,11 +51,22 @@ Item {
             GradientStop { position: 0.6; color: "#9b8a6e" }
             GradientStop { position: 1.0; color: "#2f3a2c" } } }
     Launcher { id: shell; anchors.fill: parent; foreground: true; nowTitle: "YouTube" }
-    function scene(page, selected, favs, inputs, theme) {
-        shell.settings = {lang: "en", theme: theme, exitTo: "last", clock: true, title: true, beta: false};
-        shell.favouriteIds = favs; shell.inputs = inputs;
-        shell.page = page; shell.selected = selected;
+    // One scene from a JSON spec: the settings (checked like saved ones),
+    // the lists the TV would have given, and the page and focus to show.
+    function scene(json) {
+        var s = JSON.parse(json);
+        shell.settings = shell.validSettings(s.settings || {});
+        shell.favouriteIds = s.favs; shell.allInputs = s.inputs;
+        shell.recentIds = s.recent || []; shell.hiddenIds = s.hidden || []; shell.hiddenInputs = s.hiddenInputs || [];
+        shell.usage = s.usage || {};
+        shell.updateInfo = {state: s.updateState || "idle", latest: "9.9.9", failed: ""};
+        shell.page = "home"; shell.selected = 0;
+        if (s.openSetting !== undefined) { shell.page = "settings"; shell.openSetting(s.openSetting); }
+        else shell.page = s.page;
+        shell.selected = s.selected;
     }
+    // A new app list, as the TV would send one: the glow reader runs through the icons.
+    function glow() { shell.applications = shell.applications.slice(0); }
 }
 '''
 
@@ -71,7 +85,8 @@ def panel(app_dir):
     start = q.index("    Service {\n        id: launchService")
     end = q.index("    Timer { id: launchTimeout;")
     stubs = "".join("    QtObject { id: %s; function callService(a) {} }\n" % name for name in
-                    ("launchService", "catalog", "foregroundInfo", "localeService", "inputService", "updateService"))
+                    ("launchService", "catalog", "foregroundInfo", "localeService", "inputService", "updateService", "backupService"))
+    stubs += "    function loadInputs() {}\n    function updateRun(step, channel) {}\n    function backupRun(step, data) {}\n"
     (app_dir / "Launcher.qml").write_text(q[:start] + stubs + q[end:])
     for name in ("FavouriteStore.qml", "Strings.js", "Themes.js"):
         (app_dir / name).write_bytes((ROOT / "ui" / name).read_bytes())
@@ -89,7 +104,7 @@ def panel(app_dir):
     styles = json.loads((ROOT / "config/launcher.json").read_text()).get("styles", {})
     config = {"version": (ROOT / "VERSION").read_text().strip(), "platform": "Home panel", "webos": "4.10.2",
               "apps": apps, "favourites": [a["id"] for a in apps[:7]], "styles": styles,
-              "inputs": inputs(INPUTS), "excluded": []}
+              "inputs": inputs(INPUTS), "excluded": [], "exitTarget": True}
     (app_dir / "Config.js").write_text(".pragma library\n" + "".join(
         "var %s = %s;\n" % (k, json.dumps(v)) for k, v in config.items()))
 
@@ -121,19 +136,33 @@ def main():
         view.show()
         wait(800)
         root = view.rootObject()
+        root.glow()
+        wait(2500)
         favs = [a[0] for a in APPS[:7]]
+        base = {"favs": favs, "inputs": inputs(INPUTS), "settings": {"theme": args.theme}}
+        theme = {"theme": args.theme}
+
+        def scene(name, **spec):
+            full = dict(base)
+            full.update(spec)
+            return name, full
         scenes = [
-            ("home-hdmi2", "home", 8, favs, inputs(INPUTS)),
-            ("home-fav0", "home", 0, favs, inputs(INPUTS)),
-            ("home-system", "home", 12, favs, inputs(INPUTS)),
-            ("apps", "apps", 14, favs, inputs(INPUTS)),
-            ("system", "system", 1, favs, inputs(INPUTS)),
-            ("settings", "settings", 1, favs, inputs(INPUTS)),
-            ("home-nofavs", "home", 0, [], inputs(INPUTS)),
-            ("home-2inputs", "home", 3, favs[:3], inputs(INPUTS_SMALL)),
+            scene("home-hdmi2", page="home", selected=8),
+            scene("home-fav0", page="home", selected=0),
+            scene("home-recent-tv", page="home", selected=0, settings=dict(theme, recent=3, tv=True), recent=["spotify", "kodi", "emby", "netflix"]),
+            scene("home-hidden-shown", page="home", selected=10, settings=dict(theme, showHidden=True), hiddenInputs=["com.webos.app.hdmi4"], hidden=["kids"]),
+            scene("apps", page="apps", selected=14),
+            scene("apps-az-hidden", page="apps", selected=13, settings=dict(theme, sort="az", showHidden=True), hidden=["kids", "kodi"]),
+            scene("system-update", page="system", selected=1, updateState="available"),
+            scene("settings", page="settings", selected=1),
+            scene("settings-end", page="settings", selected=13, updateState="available"),
+            scene("value-theme", openSetting=1, selected=3),
+            scene("home-larger", page="home", selected=8, settings=dict(theme, size="larger")),
+            scene("home-nofavs", page="home", selected=0, favs=[]),
+            scene("home-2inputs", page="home", selected=3, favs=favs[:3], inputs=inputs(INPUTS_SMALL)),
         ]
-        for name, page, selected, fav_ids, inp in scenes:
-            root.scene(page, selected, fav_ids, inp, args.theme)
+        for name, spec in scenes:
+            root.scene(json.dumps(spec))
             wait(700)
             target = out / ("%s-%s.png" % (args.size, name))
             view.grabWindow().save(str(target))
