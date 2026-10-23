@@ -47,4 +47,15 @@ the same files there by hand, as root; a reboot then shows whether the app
 manager takes a higher version of Home from that area. `remove` deletes the
 copy; it is gone from the app manager at the next boot.
 
-Result: not tried yet.
+Result, B4 (webOS 10.3.1): **works**. After a reboot the app manager reads
+Home from the copy (`folderPath` in the store area, version 99.0.0, type
+web), and a HOME before the hooks run launches the stand-in, which shows
+nothing (the input stays on screen; a system "wait" toast on the first
+press); LG's Home did not appear in three boots. The bind mount of the boot
+hook goes on top without error.
+
+Not taken into the release: it only matters in the first 40 s after a cold
+boot, which a TV woken from standby never sees, and it would need its own
+uninstall (the copy has to be removed, and the TV rebooted, before LG's
+Home is back) and watching over LG's store and firmware updates. A TV
+that tried it keeps the copy until `home-override.sh remove` and a reboot.
