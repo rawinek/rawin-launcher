@@ -13,7 +13,7 @@ it.
   hold OK on a favourite to move or remove it.
 - **RED hides** an app or an input you never use; nothing is uninstalled.
 - **Launcher settings**, a menu over the picture: nine
-  [languages](docs/using.md#languages), [eleven colour themes](docs/themes.md),
+  [languages](docs/using.md#languages), [eight colour themes](docs/themes.md),
   the text size, the Apps order, Live TV on the row, the clock bar, the app
   name, a **backup** of it all, and **updates** straight from this
   repository's releases, with a dot on *System* when one is there.

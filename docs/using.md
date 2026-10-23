@@ -94,7 +94,7 @@ on the right and act on OK.
 | Group | Setting | Values |
 | :--- | :--- | :--- |
 | Look | Language | *System language* (the TV's menu language, when it is one of the [languages](#languages)), or one of them by hand |
-| | Theme | Default or one of ten two-colour themes, see [Themes](themes.md) |
+| | Theme | Default or one of seven two-colour themes, see [Themes](themes.md) |
 | | Text size | Normal, Large or Larger: the names, hints, labels and the menu grow; the tiles and pills keep their size, so the row still fits |
 | | Animations | On or off |
 | Home row | Live TV on Home | A *TV* pill before the inputs, shown or hidden |

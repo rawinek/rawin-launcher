@@ -8,14 +8,11 @@
 var themes = [
     {id: "default"},
     {id: "lime", accent: "#B6FF2E", base: "#1F2329"},
-    {id: "meadow", accent: "#9FE870", base: "#163300"},
     {id: "lagoon", accent: "#D6FFCB", base: "#042F32"},
     {id: "midnight", accent: "#D7FFE0", base: "#050505"},
-    {id: "sky", accent: "#6D35FF", base: "#5DD8FF"},
     {id: "terracotta", accent: "#E26F4A", base: "#FFFCF4"},
     {id: "cherry", accent: "#FF173D", base: "#F9DEDF"},
     {id: "cobalt", accent: "#1D61F3", base: "#F1F4F9"},
-    {id: "violet", accent: "#7A00FF", base: "#FFE600"},
     {id: "indigo", accent: "#263BAA", base: "#FFF4D6"}
 ];
 var ids = themes.map(function(t) { return t.id; });

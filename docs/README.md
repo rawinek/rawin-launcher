@@ -4,7 +4,7 @@
   updating from the TV or by hand
 - [Using the launcher](using.md): Home, favourites, Apps, System, every
   setting, languages
-- [Themes](themes.md): the eleven colour themes, what each colour does, with
+- [Themes](themes.md): the eight colour themes, what each colour does, with
   pictures
 - [Compatibility](compatibility.md): which variant a TV gets, webOS versions,
   screen sizes, tested TVs, trying an untested webOS

@@ -51,7 +51,7 @@ FocusScope {
     // asked for, and the inputs. The rail, the navigation and the BACK-hold
     // target all follow these lists.
     property var allInputs: Config.inputs
-    readonly property var inputs: inputsFor(allInputs, hiddenInputs, settings.showHidden)
+    readonly property var inputs: inputsFor(allInputs, hiddenInputs, settings.showHidden, textZoom)
     readonly property var tvSource: ({id: "com.webos.app.livetv", title: t("live_tv"), detail: "", present: true, kind: "tv"})
     readonly property var sources: (settings.tv ? [tvSource] : []).concat(inputs)
     readonly property int sourceCount: sources.length
@@ -87,7 +87,8 @@ FocusScope {
     // choosing a value does not rebuild the menu around it.
     readonly property var settingGroups: groupsFor(Config.exitTarget)
     readonly property var settingKeys: keysOf(settingGroups)
-    readonly property var menuRows: rowsOf(settingGroups, lang)
+    // Built anew when the text size changes: the measurements in them start over.
+    readonly property var menuRows: rowsOf(settingGroups, lang, textZoom)
     readonly property var settingsItems: settingKeys.map(function(k) { return settingFor(k); })
     property int pane: 0
     property int valueIndex: 0
@@ -202,7 +203,7 @@ FocusScope {
     }
     // The menu's rows: {header: name} before each group, {key, index} for
     // each setting; index counts the settings alone, as selected does.
-    function rowsOf(groups, language) {
+    function rowsOf(groups, language, zoom) {
         var out = [], n = 0;
         for (var i=0; i<groups.length; i++) {
             out.push({header: t(groups[i].title)});
@@ -407,7 +408,7 @@ FocusScope {
         }
         return list;
     }
-    function inputsFor(list, hidden, showHidden) {
+    function inputsFor(list, hidden, showHidden, zoom) {
         var out = [];
         for (var i=0; i<list.length; i++) {
             var d = list[i], h = hidden.indexOf(d.id) >= 0;
@@ -1070,7 +1071,7 @@ FocusScope {
                     // A long app name is cut, not the chip pushed off the screen. Its
                     // width comes from TextMetrics: an elided Text whose width hangs
                     // on its own implicitWidth keeps an old text's width on the TV.
-                    TextMetrics { id: nowMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(19); text: nowTitle }
+                    TextMetrics { id: nowMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(19)}); text: nowTitle }
                     Text {
                         text: nowTitle; font.family: shell.fontName; font.pixelSize: shell.pt(19); color: shell.theme.text; anchors.verticalCenter: parent.verticalCenter
                         width: Math.min(Math.ceil(nowMetrics.advanceWidth) + 1, shell.px(480)); elide: Text.ElideRight
@@ -1262,7 +1263,7 @@ FocusScope {
                         font.family: shell.fontName; font.bold: true; font.pixelSize: pillDevice.visible ? shell.pt(19) : shell.pt(21); font.letterSpacing: -0.2*shell.u
                         color: pill.chosen ? shell.theme.onFocus : pill.dim ? shell.theme.dim : shell.theme.label
                     }
-                    TextMetrics { id: deviceMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(13); text: pill.entry && pill.entry.detail ? pill.entry.detail : "" }
+                    TextMetrics { id: deviceMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(13)}); text: pill.entry && pill.entry.detail ? pill.entry.detail : "" }
                     Text {
                         id: pillDevice; visible: !!(pill.entry && pill.entry.detail); anchors.horizontalCenter: parent.horizontalCenter
                         text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; width: Math.min(Math.ceil(deviceMetrics.advanceWidth) + 1, shell.pillTextCap); elide: Text.ElideRight
@@ -1482,10 +1483,11 @@ FocusScope {
                                 color: chosen ? (shell.pane === 0 ? shell.theme.focus : shell.theme.tile) : "transparent"
                                 border.width: chosen && shell.pane === 1 ? 1 : 0; border.color: shell.theme.focus
                                 Behavior on color { ColorAnimation { duration: shell.dur(120) } }
-                                // Both texts are measured apart (TextMetrics) and cut to what
-                                // the row has: the value to half of it, the name to the rest.
-                                TextMetrics { id: nameMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(22); text: setting ? setting.title : "" }
-                                TextMetrics { id: valueMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(19); text: setting ? setting.value : "" }
+                                // Both texts are measured apart (TextMetrics, the font as one
+                                // value so a new size reaches it) and cut to what the row has:
+                                // the value to half of it, the name to the rest.
+                                TextMetrics { id: nameMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(22)}); text: setting ? setting.title : "" }
+                                TextMetrics { id: valueMetrics; font: Qt.font({family: shell.fontName, pixelSize: shell.pt(19)}); text: setting ? setting.value : "" }
                                 Text {
                                     id: rowValue
                                     anchors.right: parent.right; anchors.rightMargin: shell.px(20); anchors.verticalCenter: parent.verticalCenter

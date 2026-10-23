@@ -1,12 +1,14 @@
 # Themes
 
-*System → Launcher settings → Theme* changes the launcher's colours. Each OK
-moves to the next theme and the panel changes at once, so the setting itself
-is the preview. The choice is saved with the other settings and kept by
-updates.
+*System → Launcher settings → Theme* changes the launcher's colours. The
+values are a list; moving along it repaints the panel at once, so the list
+itself is the preview. The choice is saved with the other settings and kept
+by updates.
 
-There are eleven: **Default**, the launcher's original grey look, and ten
-two-colour themes, four on a dark base and six on a light one.
+There are eight: **Default**, the launcher's original grey look, and seven
+two-colour themes, three on a dark base and four on a light one. (Meadow,
+Sky and Violet were taken out in 0.14.0; a TV that had one of them saved
+falls back to Default.)
 
 ## What the two colours do
 
@@ -14,13 +16,13 @@ Every theme other than Default is an **accent** and a **base**:
 
 | | Where it shows |
 | :--- | :--- |
-| **Accent** | The focused tile's ring; the focused HDMI pill and System tile, filled; the dot in the clock bar; the glow in the bottom-left corner while an input, *Apps* or *System* is focused (an app keeps its own glow colour); the scroll bar in *Apps* |
-| **Base** | The tiles, the HDMI pills and the System and settings tiles. On a light base they are light with dark text |
+| **Accent** | The focused tile's ring; the focused HDMI pill and System tile, filled; the dot in the clock bar; the glow in the bottom-left corner while an input, *Apps* or *System* is focused (an app keeps its own glow colour); the scroll bar in *Apps*; the focused row in the settings menu |
+| **Base** | The tiles, the HDMI pills, the System tiles and the settings menu. On a light base they are light with dark text |
 | **Shade** | Not chosen: always dark, a near-black of the base, under the name and the rail and behind the clock bar. The big name, the hints and the version over it stay white or light grey in every theme |
 
 Text on the accent is white, or near-black when the accent is a light colour
-(Lime, Meadow, Lagoon, Midnight). Warnings and the favourite you are moving
-use amber in every theme.
+(Lime, Lagoon, Midnight). Warnings and the favourite you are moving use
+amber in every theme.
 
 The pictures below are the real panel, drawn on a computer with an HDMI input
 focused (see [Development](development.md#theme-pictures)). The app icons are
@@ -30,14 +32,11 @@ stand-ins.
 | :--- | :---: | :--- | :--- |
 | [Default](#default) | <img src="themes/default-colors.svg" width="56" alt="Default: focused #F2F3F5, tiles #26282E"> | `#F2F3F5` | `#26282E` |
 | [Lime](#lime) | <img src="themes/lime-colors.svg" width="56" alt="Lime: accent #B6FF2E, base #1F2329"> | `#B6FF2E` | `#1F2329` |
-| [Meadow](#meadow) | <img src="themes/meadow-colors.svg" width="56" alt="Meadow: accent #9FE870, base #163300"> | `#9FE870` | `#163300` |
 | [Lagoon](#lagoon) | <img src="themes/lagoon-colors.svg" width="56" alt="Lagoon: accent #D6FFCB, base #042F32"> | `#D6FFCB` | `#042F32` |
 | [Midnight](#midnight) | <img src="themes/midnight-colors.svg" width="56" alt="Midnight: accent #D7FFE0, base #050505"> | `#D7FFE0` | `#050505` |
-| [Sky](#sky) | <img src="themes/sky-colors.svg" width="56" alt="Sky: accent #6D35FF, base #5DD8FF"> | `#6D35FF` | `#5DD8FF` |
 | [Terracotta](#terracotta) | <img src="themes/terracotta-colors.svg" width="56" alt="Terracotta: accent #E26F4A, base #FFFCF4"> | `#E26F4A` | `#FFFCF4` |
 | [Cherry](#cherry) | <img src="themes/cherry-colors.svg" width="56" alt="Cherry: accent #FF173D, base #F9DEDF"> | `#FF173D` | `#F9DEDF` |
 | [Cobalt](#cobalt) | <img src="themes/cobalt-colors.svg" width="56" alt="Cobalt: accent #1D61F3, base #F1F4F9"> | `#1D61F3` | `#F1F4F9` |
-| [Violet](#violet) | <img src="themes/violet-colors.svg" width="56" alt="Violet: accent #7A00FF, base #FFE600"> | `#7A00FF` | `#FFE600` |
 | [Indigo](#indigo) | <img src="themes/indigo-colors.svg" width="56" alt="Indigo: accent #263BAA, base #FFF4D6"> | `#263BAA` | `#FFF4D6` |
 
 ## Default
@@ -60,12 +59,6 @@ focused.
 
 <img src="themes/lime.png" width="100%" alt="Lime theme: graphite tiles, lime focused HDMI 2 pill">
 
-### Meadow
-
-<img src="themes/meadow-colors.svg" width="56" alt=""> Accent `#9FE870` on forest green `#163300`.
-
-<img src="themes/meadow.png" width="100%" alt="Meadow theme: dark green tiles, light green focused HDMI 2 pill">
-
 ### Lagoon
 
 <img src="themes/lagoon-colors.svg" width="56" alt=""> Accent `#D6FFCB` on deep teal `#042F32`.
@@ -82,12 +75,6 @@ focused.
 
 Light tiles and pills with dark text and icons, over the same dark shade as the
 dark themes, so the name and the hints stay white over any picture.
-
-### Sky
-
-<img src="themes/sky-colors.svg" width="56" alt=""> Accent `#6D35FF` on sky blue `#5DD8FF`.
-
-<img src="themes/sky.png" width="100%" alt="Sky theme: sky blue tiles, purple focused HDMI 2 pill">
 
 ### Terracotta
 
@@ -106,12 +93,6 @@ dark themes, so the name and the hints stay white over any picture.
 <img src="themes/cobalt-colors.svg" width="56" alt=""> Accent `#1D61F3` on cool grey `#F1F4F9`.
 
 <img src="themes/cobalt.png" width="100%" alt="Cobalt theme: light grey tiles, blue focused HDMI 2 pill">
-
-### Violet
-
-<img src="themes/violet-colors.svg" width="56" alt=""> Accent `#7A00FF` on yellow `#FFE600`.
-
-<img src="themes/violet.png" width="100%" alt="Violet theme: yellow tiles, violet focused HDMI 2 pill">
 
 ### Indigo
 
