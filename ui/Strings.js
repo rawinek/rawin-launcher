@@ -50,7 +50,8 @@ var table = {
         hint_hide: "hide", hint_unhide: "show again", key_red: "RED", hint_choose: "choose", hint_back_target: "use after holding BACK", exit_set: "After holding BACK: {name}",
         set_backup: "Back up favourites and settings", set_restore: "Restore from the backup", bak_none: "No backup yet", bak_saved: "Backup from {date}", bak_done: "Backed up", bak_restored: "Restored from the backup",
         bak_err: "Could not write the backup.", bak_err_read: "Could not read the backup.", hint_backup: "back up", hint_restore: "restore",
-        grp_look: "Look", grp_home: "Home row", grp_apps: "Apps", grp_screen: "On screen", grp_backup: "Backup", grp_updates: "Updates"
+        grp_look: "Look", grp_home: "Home row", grp_apps: "Apps", grp_screen: "On screen", grp_backup: "Backup", grp_updates: "Updates",
+        set_hours: "Clock format", val_hours_24: "24-hour", val_hours_12: "12-hour"
     },
     es: {
         set_update: "Actualizaciones", set_beta: "Versiones de prueba", val_on: "Sí", val_off: "No",
@@ -97,7 +98,8 @@ var table = {
         hint_hide: "ocultar", hint_unhide: "mostrar de nuevo", key_red: "ROJO", hint_choose: "elegir", hint_back_target: "usar al mantener ATRÁS", exit_set: "Al mantener ATRÁS: {name}",
         set_backup: "Copia de favoritos y ajustes", set_restore: "Restaurar la copia", bak_none: "Sin copia todavía", bak_saved: "Copia del {date}", bak_done: "Copia guardada", bak_restored: "Restaurado de la copia",
         bak_err: "No se pudo guardar la copia.", bak_err_read: "No se pudo leer la copia.", hint_backup: "guardar copia", hint_restore: "restaurar",
-        grp_look: "Aspecto", grp_home: "Fila de inicio", grp_apps: "Aplicaciones", grp_screen: "En pantalla", grp_backup: "Copia de seguridad", grp_updates: "Actualizaciones"
+        grp_look: "Aspecto", grp_home: "Fila de inicio", grp_apps: "Aplicaciones", grp_screen: "En pantalla", grp_backup: "Copia de seguridad", grp_updates: "Actualizaciones",
+        set_hours: "Formato de hora", val_hours_24: "24 horas", val_hours_12: "12 horas"
     },
     de: {
         set_update: "Updates", set_beta: "Testversionen", val_on: "An", val_off: "Aus",
@@ -144,7 +146,8 @@ var table = {
         hint_hide: "ausblenden", hint_unhide: "wieder anzeigen", key_red: "ROT", hint_choose: "wählen", hint_back_target: "nach langem ZURÜCK öffnen", exit_set: "Nach langem ZURÜCK: {name}",
         set_backup: "Favoriten und Einstellungen sichern", set_restore: "Aus der Sicherung wiederherstellen", bak_none: "Noch keine Sicherung", bak_saved: "Sicherung vom {date}", bak_done: "Gesichert", bak_restored: "Aus der Sicherung wiederhergestellt",
         bak_err: "Die Sicherung konnte nicht geschrieben werden.", bak_err_read: "Die Sicherung konnte nicht gelesen werden.", hint_backup: "sichern", hint_restore: "wiederherstellen",
-        grp_look: "Aussehen", grp_home: "Home-Reihe", grp_apps: "Apps", grp_screen: "Auf dem Bildschirm", grp_backup: "Sicherung", grp_updates: "Updates"
+        grp_look: "Aussehen", grp_home: "Home-Reihe", grp_apps: "Apps", grp_screen: "Auf dem Bildschirm", grp_backup: "Sicherung", grp_updates: "Updates",
+        set_hours: "Uhrzeitformat", val_hours_24: "24 Stunden", val_hours_12: "12 Stunden"
     },
     pl: {
         set_update: "Aktualizacje", set_beta: "Wersje testowe", val_on: "Włączone", val_off: "Wyłączone",
@@ -191,7 +194,8 @@ var table = {
         hint_hide: "ukryj", hint_unhide: "pokaż ponownie", key_red: "CZERWONY", hint_choose: "wybierz", hint_back_target: "cel po przytrzymaniu WSTECZ", exit_set: "Po przytrzymaniu WSTECZ: {name}",
         set_backup: "Kopia ulubionych i ustawień", set_restore: "Przywróć z kopii", bak_none: "Brak kopii", bak_saved: "Kopia z {date}", bak_done: "Kopia zapisana", bak_restored: "Przywrócono z kopii",
         bak_err: "Nie udało się zapisać kopii.", bak_err_read: "Nie udało się odczytać kopii.", hint_backup: "zapisz kopię", hint_restore: "przywróć",
-        grp_look: "Wygląd", grp_home: "Pasek główny", grp_apps: "Aplikacje", grp_screen: "Na ekranie", grp_backup: "Kopia zapasowa", grp_updates: "Aktualizacje"
+        grp_look: "Wygląd", grp_home: "Pasek główny", grp_apps: "Aplikacje", grp_screen: "Na ekranie", grp_backup: "Kopia zapasowa", grp_updates: "Aktualizacje",
+        set_hours: "Format godziny", val_hours_24: "24-godzinny", val_hours_12: "12-godzinny"
     },
     fr: {
         set_update: "Mises à jour", set_beta: "Versions de test", val_on: "Activé", val_off: "Désactivé",
@@ -238,7 +242,8 @@ var table = {
         hint_hide: "masquer", hint_unhide: "afficher à nouveau", key_red: "ROUGE", hint_choose: "choisir", hint_back_target: "ouvrir après un appui long sur RETOUR", exit_set: "Après un appui long sur RETOUR : {name}",
         set_backup: "Sauvegarder les favoris et les réglages", set_restore: "Restaurer la sauvegarde", bak_none: "Pas encore de sauvegarde", bak_saved: "Sauvegarde du {date}", bak_done: "Sauvegardé", bak_restored: "Restauré depuis la sauvegarde",
         bak_err: "Impossible d'écrire la sauvegarde.", bak_err_read: "Impossible de lire la sauvegarde.", hint_backup: "sauvegarder", hint_restore: "restaurer",
-        grp_look: "Apparence", grp_home: "Rangée d'accueil", grp_apps: "Applications", grp_screen: "À l'écran", grp_backup: "Sauvegarde", grp_updates: "Mises à jour"
+        grp_look: "Apparence", grp_home: "Rangée d'accueil", grp_apps: "Applications", grp_screen: "À l'écran", grp_backup: "Sauvegarde", grp_updates: "Mises à jour",
+        set_hours: "Format de l'heure", val_hours_24: "24 heures", val_hours_12: "12 heures"
     },
     it: {
         set_update: "Aggiornamenti", set_beta: "Versioni di prova", val_on: "Attive", val_off: "Disattivate",
@@ -285,7 +290,8 @@ var table = {
         hint_hide: "nascondi", hint_unhide: "mostra di nuovo", key_red: "ROSSO", hint_choose: "scegli", hint_back_target: "apri dopo INDIETRO tenuto premuto", exit_set: "Dopo INDIETRO tenuto premuto: {name}",
         set_backup: "Backup di preferiti e impostazioni", set_restore: "Ripristina dal backup", bak_none: "Nessun backup", bak_saved: "Backup del {date}", bak_done: "Backup salvato", bak_restored: "Ripristinato dal backup",
         bak_err: "Impossibile scrivere il backup.", bak_err_read: "Impossibile leggere il backup.", hint_backup: "salva backup", hint_restore: "ripristina",
-        grp_look: "Aspetto", grp_home: "Riga della home", grp_apps: "App", grp_screen: "Sullo schermo", grp_backup: "Backup", grp_updates: "Aggiornamenti"
+        grp_look: "Aspetto", grp_home: "Riga della home", grp_apps: "App", grp_screen: "Sullo schermo", grp_backup: "Backup", grp_updates: "Aggiornamenti",
+        set_hours: "Formato dell'ora", val_hours_24: "24 ore", val_hours_12: "12 ore"
     },
     pt: {
         set_update: "Atualizações", set_beta: "Versões de teste", val_on: "Ativadas", val_off: "Desativadas",
@@ -332,7 +338,8 @@ var table = {
         hint_hide: "ocultar", hint_unhide: "mostrar de novo", key_red: "VERMELHO", hint_choose: "escolher", hint_back_target: "abrir ao manter RETROCEDER", exit_set: "Ao manter RETROCEDER: {name}",
         set_backup: "Cópia de favoritos e definições", set_restore: "Restaurar da cópia", bak_none: "Ainda sem cópia", bak_saved: "Cópia de {date}", bak_done: "Cópia guardada", bak_restored: "Restaurado da cópia",
         bak_err: "Não foi possível guardar a cópia.", bak_err_read: "Não foi possível ler a cópia.", hint_backup: "guardar cópia", hint_restore: "restaurar",
-        grp_look: "Aspeto", grp_home: "Fila inicial", grp_apps: "Aplicações", grp_screen: "No ecrã", grp_backup: "Cópia de segurança", grp_updates: "Atualizações"
+        grp_look: "Aspeto", grp_home: "Fila inicial", grp_apps: "Aplicações", grp_screen: "No ecrã", grp_backup: "Cópia de segurança", grp_updates: "Atualizações",
+        set_hours: "Formato da hora", val_hours_24: "24 horas", val_hours_12: "12 horas"
     },
     nl: {
         set_update: "Updates", set_beta: "Testversies", val_on: "Aan", val_off: "Uit",
@@ -379,7 +386,8 @@ var table = {
         hint_hide: "verbergen", hint_unhide: "weer tonen", key_red: "ROOD", hint_choose: "kiezen", hint_back_target: "openen na lang TERUG", exit_set: "Na lang TERUG: {name}",
         set_backup: "Back-up van favorieten en instellingen", set_restore: "Terugzetten uit de back-up", bak_none: "Nog geen back-up", bak_saved: "Back-up van {date}", bak_done: "Back-up gemaakt", bak_restored: "Teruggezet uit de back-up",
         bak_err: "De back-up kon niet worden geschreven.", bak_err_read: "De back-up kon niet worden gelezen.", hint_backup: "back-up maken", hint_restore: "terugzetten",
-        grp_look: "Uiterlijk", grp_home: "Home-rij", grp_apps: "Apps", grp_screen: "Op het scherm", grp_backup: "Back-up", grp_updates: "Updates"
+        grp_look: "Uiterlijk", grp_home: "Home-rij", grp_apps: "Apps", grp_screen: "Op het scherm", grp_backup: "Back-up", grp_updates: "Updates",
+        set_hours: "Tijdnotatie", val_hours_24: "24 uur", val_hours_12: "12 uur"
     },
     cs: {
         set_update: "Aktualizace", set_beta: "Testovací verze", val_on: "Zapnuto", val_off: "Vypnuto",
@@ -426,7 +434,8 @@ var table = {
         hint_hide: "skrýt", hint_unhide: "znovu zobrazit", key_red: "ČERVENÉ", hint_choose: "vybrat", hint_back_target: "otevřít po podržení ZPĚT", exit_set: "Po podržení ZPĚT: {name}",
         set_backup: "Záloha oblíbených a nastavení", set_restore: "Obnovit ze zálohy", bak_none: "Zatím žádná záloha", bak_saved: "Záloha z {date}", bak_done: "Zálohováno", bak_restored: "Obnoveno ze zálohy",
         bak_err: "Zálohu se nepodařilo zapsat.", bak_err_read: "Zálohu se nepodařilo přečíst.", hint_backup: "zálohovat", hint_restore: "obnovit",
-        grp_look: "Vzhled", grp_home: "Domovská lišta", grp_apps: "Aplikace", grp_screen: "Na obrazovce", grp_backup: "Záloha", grp_updates: "Aktualizace"
+        grp_look: "Vzhled", grp_home: "Domovská lišta", grp_apps: "Aplikace", grp_screen: "Na obrazovce", grp_backup: "Záloha", grp_updates: "Aktualizace",
+        set_hours: "Formát času", val_hours_24: "24 hodin", val_hours_12: "12 hodin"
     }
 };
 // "pl-PL", "pl_PL" or "pl" → "pl" when supported, else "".

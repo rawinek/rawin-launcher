@@ -102,6 +102,7 @@ on the right and act on OK.
 | | After holding BACK | Overlay only: the last input, or one of the TV's inputs. Also where the TV goes when an app exits |
 | Apps | Apps order | The TV's order, A to Z, or the most used first |
 | On screen | Clock bar | Shown or hidden |
+| | Clock format | 24-hour (16:05) or 12-hour (4:05 PM); the backup's time follows it |
 | | App name | Whether the big name of the focused item shows on Home and in *Apps* (System always shows it) |
 | Backup | Back up favourites and settings | OK writes everything the launcher keeps to a file next to it; the status says when the last backup was made, see [Backup](#backup) |
 | | Restore from the backup | OK brings that file back |

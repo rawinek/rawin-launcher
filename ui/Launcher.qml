@@ -55,16 +55,19 @@ FocusScope {
     readonly property var tvSource: ({id: "com.webos.app.livetv", title: t("live_tv"), detail: "", present: true, kind: "tv"})
     readonly property var sources: (settings.tv ? [tvSource] : []).concat(inputs)
     readonly property int sourceCount: sources.length
-    property string clock: ""
+    // The moment the clock shows (tick() moves it on the minute) and the
+    // clock itself, in the setting's format: 24-hour or 12-hour.
+    property var nowTime: new Date()
+    readonly property string clock: Qt.formatTime(nowTime, settings.hours === "12" ? "h:mm AP" : "hh:mm")
     property string nowTitle: ""
     // Launcher settings, saved with the favourites (key "settings").
     // lang: "system" or a code from Strings.languages; theme: an id from
     // Themes.ids; size: the text size; motion: animations; sort: the Apps
     // order; tv: a Live TV source on the rail; showHidden: hidden apps and
     // inputs shown dimmed; exitTo (overlay only, sent to the helper): "last"
-    // or an input app id; clock: the top bar; title: the big name of the
-    // focused app on Home and Apps; beta: updates also offer test builds
-    // (GitHub pre-releases).
+    // or an input app id; clock: the top bar; hours: its format, "24" or
+    // "12"; title: the big name of the focused app on Home and Apps; beta:
+    // updates also offer test builds (GitHub pre-releases).
     property var settings: validSettings({})
     property string systemLang: ""
     // The updater (Launcher settings → Updates): idle, checking, current,
@@ -190,7 +193,7 @@ FocusScope {
             {title: "grp_look", keys: ["lang", "theme", "size", "motion"]},
             {title: "grp_home", keys: exitTarget ? ["tv", "showHidden", "exitTo"] : ["tv", "showHidden"]},
             {title: "grp_apps", keys: ["sort"]},
-            {title: "grp_screen", keys: ["clock", "title"]},
+            {title: "grp_screen", keys: ["clock", "hours", "title"]},
             {title: "grp_backup", keys: ["backup", "restore"]},
             {title: "grp_updates", keys: ["update", "beta"]}
         ];
@@ -214,12 +217,13 @@ FocusScope {
     // action's status), and what OK does with it.
     function settingFor(key) {
         var names = {lang: "set_language", theme: "set_theme", size: "set_size", motion: "set_motion", sort: "set_sort", tv: "set_tv",
-                     showHidden: "set_hidden", exitTo: "set_exit", clock: "set_clock", title: "set_title", backup: "set_backup",
+                     showHidden: "set_hidden", exitTo: "set_exit", clock: "set_clock", hours: "set_hours", title: "set_title", backup: "set_backup",
                      restore: "set_restore", update: "set_update", beta: "set_beta"};
         var item = {key: key, title: t(names[key]), action: "setting", value: ""};
         if (key === "backup" || key === "restore") {
             item.action = key;
-            item.value = backupInfo.saved ? Strings.format(t("bak_saved"), {date: Qt.formatDateTime(new Date(backupInfo.saved), "yyyy-MM-dd hh:mm")}) : t("bak_none");
+            // The day and the time, in the clock's format: short enough for the row.
+            item.value = backupInfo.saved ? Strings.format(t("bak_saved"), {date: Qt.formatDateTime(new Date(backupInfo.saved), "d MMM " + (settings.hours === "12" ? "h:mm AP" : "hh:mm"))}) : t("bak_none");
         } else if (key === "update") {
             item.action = "update";
             item.value = updateText(updateInfo);
@@ -249,6 +253,8 @@ FocusScope {
             for (i=0; i<inputList.length; i++) list.push({id: inputList[i].id, title: inputList[i].title});
         } else if (key === "clock" || key === "tv") {
             list = [{id: true, title: t("val_show")}, {id: false, title: t("val_hide")}];
+        } else if (key === "hours") {
+            list = [{id: "24", title: t("val_hours_24")}, {id: "12", title: t("val_hours_12")}];
         } else if (key === "title") {
             list = [{id: true, title: t("val_name_show")}, {id: false, title: t("val_name_hide")}];
         } else if (key === "motion" || key === "beta") {
@@ -352,6 +358,7 @@ FocusScope {
             showHidden: s.showHidden === true,
             exitTo: /^(last|com\.webos\.app\.(hdmi|dp|usbc)\d)$/.test(s.exitTo) ? s.exitTo : "last",
             clock: s.clock !== false,
+            hours: s.hours === "12" ? "12" : "24",
             title: s.title !== false,
             beta: s.beta === true
         };
@@ -773,7 +780,7 @@ FocusScope {
     // the minute turns, so the bar is never half a minute behind.
     function tick() {
         var now = new Date();
-        clock = Qt.formatTime(now, "hh:mm");
+        nowTime = now;
         clockTimer.interval = 60000 - (now.getSeconds()*1000 + now.getMilliseconds()) + 50;
     }
     Timer { id: clockTimer; interval: 60000; repeat: true; running: shell.foreground; onTriggered: tick() }

@@ -147,7 +147,7 @@ def main():
             return name, full
         scenes = [
             scene("home-hdmi2", page="home", selected=8),
-            scene("home-fav0", page="home", selected=0),
+            scene("home-fav0", page="home", selected=0, settings=dict(theme, hours="12")),
             scene("home-tv", page="home", selected=0, settings=dict(theme, tv=True)),
             scene("home-hidden-shown", page="home", selected=10, settings=dict(theme, showHidden=True), hiddenInputs=["com.webos.app.hdmi4"], hidden=["kids"]),
             scene("apps", page="apps", selected=14),
