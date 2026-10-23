@@ -86,9 +86,12 @@ or_note() { out=$("$@" 2>/dev/null); if [ -n "$out" ]; then echo "$out"; else ec
     done
     show /tmp/rawin-launcher-update/state
 
+    # The overlay's qml-runner carries org.rawin.launcher in its arguments and
+    # the helper runs from org.rawin.launcher.service; LG's own QML apps use
+    # qml-runner too, so only "rawin" tells ours apart.
     section "Processes"
     NOTE="(none of the launcher's own; the Home panel runs inside LG Home's process)"
-    or_note sh -c "ps -ef 2>/dev/null | grep -E 'rawin|qml-runner' | grep -v -E 'grep|diagnose'"
+    or_note sh -c "ps -ef 2>/dev/null | grep -F rawin | grep -v -E 'grep|diagnose'"
 
     # The launcher's own messages and errors, not the list of launched apps.
     section "System log (rawin-launcher lines)"
