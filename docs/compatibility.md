@@ -37,9 +37,9 @@ reports webOS 4's as `native`, a program that loads that QML.
 | 1.x – 2.x | 2014–2015 | Web app | — (no variant fits: no QML Home, node 0.10) | Not supported |
 | 3.x | 2016–2017 | QML | Home panel, if the patch fits | Untested |
 | 4.x (webOS 4.0/4.5) | 2018–2019 | QML | Home panel | **Tested on 4.10** |
-| 5.x | 2020 | QML | Home panel if the patch fits, else overlay | Untested |
-| 6.x | 2021 | QML | Home panel if the patch fits, else overlay | Untested |
-| 7.x (webOS 22), 8.x (webOS 23) | 2022–2023 | QML, as far as known | Home panel if the patch fits, else overlay | Untested |
+| 5.x | 2020 | QML, the same kind of ribbon as 4.x | Home panel if the patch fits, else overlay | Untested |
+| 6.x | 2021 | QML, as far as known; a new full-screen Home | Most likely the overlay: the patch was made for the 4.x ribbon | Untested |
+| 7.x (webOS 22), 8.x (webOS 23) | 2022–2023 | QML, as far as known; the full-screen Home | Most likely the overlay, as on 6.x | Untested |
 | 9.x (webOS 24) | 2024 | Flutter, like webOS 10 | Overlay, LG's Home kept unless `--replace-lg-home` | Untested |
 | 10.x (webOS 25) | 2025 | Flutter | Overlay, LG's Home replaced by the black stand-in | **Tested on 10.3** |
 | 11.x (webOS 26) | 2026 | Flutter, like webOS 10 | Overlay, LG's Home kept unless `--replace-lg-home` | Untested |
@@ -47,7 +47,10 @@ reports webOS 4's as `native`, a program that loads that QML.
 What the untested rows rest on: LG's Home was a QML app
 (`/usr/palm/applications/com.webos.app.home/qml`) from webOS 3 to the last
 QML Home, and the patch only needs the few things every one of them has
-(see above). The overlay needs what the Homebrew Channel gives any rooted
+(see above). The patch was written against the ribbon Home of webOS 4; the
+full-screen Home that came with webOS 6 is a different app, so there the
+patch will most likely say it does not fit and the installer goes on with
+the overlay, with LG's Home left in place unless `--replace-lg-home`. The overlay needs what the Homebrew Channel gives any rooted
 TV, Input Hook, and a node new enough for the helper: webOS 3 and 4 ship
 node 0.12, webOS 5 node 8, webOS 6 and later node 12 or newer. The black
 stand-in for LG's Home (a block and release of the one app, as
