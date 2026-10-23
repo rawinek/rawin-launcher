@@ -8,8 +8,9 @@ that opens LG's own Home once. LG updates its built-in apps by installing a
 higher version of the same id outside the firmware, and the app manager takes
 that copy. If it does the same for com.webos.app.home from a developer
 install, this package makes the stand-in LG's Home from the first second of a
-boot, with nothing to mount. webos10/home-override.sh installs, checks and
-removes it on the TV; see docs/experiments.md.
+boot, with nothing to mount. webos10/home-override.sh installs, places (a copy
+by hand into the store apps area, where LG's own updates of built-in apps
+go), checks and removes it on the TV; see docs/experiments.md.
 
 Usage: tools/build-home-override.py
 """
@@ -44,8 +45,15 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     (out / ("%s_%s_all.ipk" % (HOME, VERSION))).write_bytes(ipk)
     (out / "home-override.sh").write_bytes((ROOT / "webos10/home-override.sh").read_bytes())
-    for p in sorted(out.iterdir()):
-        print(p)
+    # The same files laid out plainly, for home-override.sh place (a copy by
+    # hand into the store apps area, no installer).
+    for path, data in files:
+        target = out / "files" / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    for p in sorted(out.rglob("*")):
+        if p.is_file():
+            print(p)
 
 
 if __name__ == "__main__":

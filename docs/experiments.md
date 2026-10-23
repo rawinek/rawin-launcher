@@ -33,4 +33,18 @@ What a HOME before the hooks would then show is the black page, until the
 helper comes up and switches to the input: black for up to 15 s instead of
 LG's Home for as long.
 
+Result, B4 (webOS 10.3.1): **refused**. The developer installer parses the
+package, closes the running Home, then fails with error -15, *Cannnot
+install privileged app on developer mode*; nothing is written. An id under
+`com.webos.` is privileged, and the developer installer will not take one.
+
+### The copy by hand
+
+The refusal is the developer installer's, not the app manager's. LG's own
+updates of built-in apps go to `/media/cryptofs/apps/usr/palm/applications/`
+(the store apps area), which the app manager reads at boot. `place` copies
+the same files there by hand, as root; a reboot then shows whether the app
+manager takes a higher version of Home from that area. `remove` deletes the
+copy; it is gone from the app manager at the next boot.
+
 Result: not tried yet.
