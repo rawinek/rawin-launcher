@@ -5,17 +5,20 @@
     // answers nothing to a developer QML app). Same callService() shape as
     // the Service elements it replaces in ui/Launcher.qml.
     readonly property string helper: "http://127.0.0.1:8899"
-    function http(pathname, done, failed) {
+    // GET, or POST with a JSON body.
+    function http(pathname, done, failed, body) {
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            var body = null;
-            if (xhr.status === 200) { try { body = JSON.parse(xhr.responseText); } catch (e) {} }
-            if (body) { if (done) done(body); }
+            var answer = null;
+            if (xhr.status === 200) { try { answer = JSON.parse(xhr.responseText); } catch (e) {} }
+            if (answer) { if (done) done(answer); }
             else if (failed) failed(xhr.status);
         };
-        xhr.open("GET", helper + pathname);
-        xhr.send();
+        var post = body !== undefined && body !== null;
+        xhr.open(post ? "POST" : "GET", helper + pathname);
+        if (post) { xhr.setRequestHeader("Content-Type", "application/json"); xhr.send(JSON.stringify(body)); }
+        else xhr.send();
     }
     function loadInputs() {
         http("/inputs", function(r) { setInputs(r.devices ? inputsFrom(r.devices) : []); });
@@ -46,7 +49,7 @@
                 }
                 if (same(next, applications)) return;
                 applications = next;
-                if (page === "apps") selected = Math.max(0, Math.min(selected, next.length-1));
+                if (page === "apps") selected = Math.max(0, Math.min(selected, apps.length-1));
             });
         }
     }
@@ -64,6 +67,12 @@
     function updateRun(step, channel) {
         http("/update?step=" + step + "&channel=" + channel,
              function(r) { updateResult(step, r); }, function() { updateResult(step, null); });
+    }
+    // The backup file, kept by the helper next to the launcher: written
+    // with a POST, read back (info and load) with a GET.
+    function backupRun(step, data) {
+        if (step === "save") http("/backup", function(r) { backupResult("save", r); }, function() { backupResult("save", null); }, data);
+        else http("/restore", function(r) { backupResult(step, r.saved ? r : null); }, function() { backupResult(step, null); });
     }
     // What stays visible under the overlay: the first card that is not us.
     QtObject {

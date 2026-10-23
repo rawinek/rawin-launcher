@@ -2,8 +2,10 @@
 // shared panel (Panel.qml, generated from ui/Launcher.qml by tools/build.py)
 // in a developer QML overlay window run by qml-runner. HOME relaunches the
 // app; qml-runner resets the "params" context property, which shows the
-// panel again. BACK hides the window but keeps the process, so the next HOME
-// is a show, not a start.
+// panel, or hides it when it is already up. BACK hides the window but keeps
+// the process, so the next HOME is a show, not a start. The boot hook
+// launches the app with {"preload": true}: then the window starts hidden,
+// and the first HOME after a boot is a show too.
 import QtQuick 2.4
 import QtQuick.Window 2.2
 import Eos.Window 0.1
@@ -18,13 +20,19 @@ WebOSWindow {
     readonly property bool smallScreen: Screen.width > 0 && Screen.height > 0 && Screen.width < 1920
     width: smallScreen ? Screen.width : 1920
     height: smallScreen ? Screen.height : 1080
-    visible: true
+    property var launchParams: typeof params !== "undefined" ? params : null
+    readonly property bool preloaded: launchParams !== null && launchParams !== undefined && launchParams.preload === true
+    visible: !preloaded
     color: "transparent"
     appId: "org.rawin.launcher"
     title: "Homebar"
 
-    property var launchParams: typeof params !== "undefined" ? params : null
-    onLaunchParamsChanged: show()
+    // Each launch: HOME while the panel is up hides it, otherwise shows it;
+    // the boot hook's preload only makes sure the process is there.
+    onLaunchParamsChanged: {
+        if (launchParams && launchParams.preload) return;
+        if (win.visible && home.foreground) hide(); else show();
+    }
 
     function show() {
         hideTimer.stop();
@@ -42,10 +50,10 @@ WebOSWindow {
     Panel {
         id: home
         anchors.fill: parent
-        foreground: true
+        foreground: !win.preloaded
         onCloseRequested: win.hide()
         // Original LG Home: SAM opens it as a card; we step aside.
         onStockRequested: http("/launch?id=com.webos.app.home", function() { win.hide(); })
-        Component.onCompleted: { home.ready = true; home.loadInputs(); home.forceActiveFocus(); }
+        Component.onCompleted: { home.ready = true; home.loadInputs(); if (!win.preloaded) home.forceActiveFocus(); }
     }
 }

@@ -65,7 +65,21 @@ async function inventory() {
   return { returnValue: true, apps };
 }
 
-const UPDATER = '/var/lib/webosbrew/rawin-launcher-home/update.sh';
+const BASE = '/var/lib/webosbrew/rawin-launcher-home';
+const UPDATER = BASE + '/update.sh';
+// Favourites and settings, as the panel sends them (Launcher settings → Back up).
+const BACKUP = BASE + '/backup.json';
+
+// A request's body, up to 64 KB.
+function readBody(req) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => { size += c.length; if (size <= 65536) chunks.push(c); });
+    req.on('end', () => resolve(size <= 65536 ? Buffer.concat(chunks).toString('utf8') : ''));
+    req.on('error', () => resolve(''));
+  });
+}
 
 // One step of update.sh; its last line of output is the JSON answer.
 function updateStep(step, channel) {
@@ -150,6 +164,19 @@ const server = http.createServer(async (req, res) => {
       if (!['check', 'download', 'install', 'status'].includes(step)) return send(res, 400, { ok: false, error: 'unknown step' });
       const channel = query.channel === 'test' ? 'test' : 'stable';
       return send(res, 200, await updateStep(step, channel));
+    }
+    // The backup file: written from the panel, read back for info and restore.
+    if (url.pathname === '/backup' && req.method === 'POST') {
+      let data = null;
+      try { data = JSON.parse(await readBody(req)); } catch (e) {}
+      if (!data || typeof data !== 'object' || !data.saved) return send(res, 400, { ok: false, error: 'not a backup' });
+      fs.writeFileSync(BACKUP, JSON.stringify(data));
+      return send(res, 200, { ok: true });
+    }
+    if (url.pathname === '/restore') {
+      let text = 'null';
+      try { text = fs.readFileSync(BACKUP, 'utf8'); } catch (e) {}
+      return send(res, 200, text);
     }
     if (url.pathname.startsWith('/cache/')) {
       const name = path.basename(url.pathname);
