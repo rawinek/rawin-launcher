@@ -1519,6 +1519,16 @@ FocusScope {
                     onPageChanged: { menuList.contentY = 0; menuList.follow(); }
                 }
             }
+            // The list's edges fade into the card, so a row cut by the edge
+            // does not look cut.
+            Rectangle {
+                x: menuList.x; y: menuList.y; width: menuList.width; height: shell.px(18)
+                gradient: Gradient { GradientStop { position: 0; color: shell.chip } GradientStop { position: 1; color: Qt.rgba(0, 0, 0, 0) } }
+            }
+            Rectangle {
+                x: menuList.x; y: menuList.y + menuList.height - shell.px(18); width: menuList.width; height: shell.px(18)
+                gradient: Gradient { GradientStop { position: 0; color: Qt.rgba(0, 0, 0, 0) } GradientStop { position: 1; color: shell.chip } }
+            }
             Rectangle { x: menu.pad + menu.listWidth + shell.px(40); y: menu.listTop; width: 1; height: menuList.height; color: shell.chipEdge }
 
             // The focused setting: its values, or an action's status.
