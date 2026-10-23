@@ -31,7 +31,8 @@ The focused item's name shows above the row, and the hints under it say what
 OK and the other keys do. The clock bar in the top-right corner shows what is
 on screen and the time. BACK closes the panel; from *Apps* or *System* it goes
 back to Home. The panel fits the TV's screen, HD or FHD/UHD, at the same
-proportions.
+proportions. With the Magic Remote's pointer, a click on anything focuses
+and opens it; pointing alone changes nothing, and neither does the wheel.
 
 LG's promotional apps (LG Channels, Sports, Alexa, …) are left out of the
 launcher's lists. Nothing is uninstalled.
@@ -59,8 +60,8 @@ uninstalled; hidden apps are only out of the launcher's lists.
 ## Apps
 
 All installed apps, as many to a row as the screen is wide (twelve on a 16:9
-screen), two rows on screen; the row scrolls with the focus, or with the
-pointer's wheel. *Launcher settings → Apps order* puts them in the TV's
+screen), two rows on screen; the row scrolls with the focus. *Launcher
+settings → Apps order* puts them in the TV's
 order, from A to Z, or the most used first, counted from the launcher's own
 launches. An app's glow colour lights the bottom-left corner while it is
 focused: the colour the build knows for it, else one read from its icon.

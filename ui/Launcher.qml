@@ -150,16 +150,6 @@ FocusScope {
     Behavior on glowColor { ColorAnimation { duration: shell.dur(300) } }
 
     function closeHome() { closeRequested(); }
-    // Whether the pointer really moved: Qt sends a hover to whatever appears
-    // under a pointer that stays where it is (a menu opening under it), and
-    // the menu must not pick a row, let alone a value, from that.
-    property point pointerAt: Qt.point(-1, -1)
-    function pointerMoved(item, mouse) {
-        var p = item.mapToItem(null, mouse.x, mouse.y), first = pointerAt.x < 0;
-        var moved = !first && (Math.abs(p.x - pointerAt.x) > 2 || Math.abs(p.y - pointerAt.y) > 2);
-        pointerAt = Qt.point(p.x, p.y);
-        return moved;
-    }
 
     FontLoader { id: inter; source: "file:///var/lib/webosbrew/rawin-launcher/current/fonts/Inter-Regular.ttf" }
     FontLoader { id: interBold; source: "file:///var/lib/webosbrew/rawin-launcher/current/fonts/Inter-Bold.ttf" }
@@ -1077,10 +1067,13 @@ FocusScope {
                 Row {
                     visible: nowTitle !== ""; spacing: shell.px(10); anchors.verticalCenter: parent.verticalCenter
                     Rectangle { width: shell.px(7); height: width; radius: width/2; color: shell.theme.focus; anchors.verticalCenter: parent.verticalCenter }
+                    // A long app name is cut, not the chip pushed off the screen. Its
+                    // width comes from TextMetrics: an elided Text whose width hangs
+                    // on its own implicitWidth keeps an old text's width on the TV.
+                    TextMetrics { id: nowMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(19); text: nowTitle }
                     Text {
                         text: nowTitle; font.family: shell.fontName; font.pixelSize: shell.pt(19); color: shell.theme.text; anchors.verticalCenter: parent.verticalCenter
-                        // A long app name is cut, not the chip pushed off the screen.
-                        width: Math.min(implicitWidth, shell.px(480)); elide: Text.ElideRight
+                        width: Math.min(Math.ceil(nowMetrics.advanceWidth) + 1, shell.px(480)); elide: Text.ElideRight
                     }
                 }
                 Rectangle { visible: nowTitle !== ""; width: 1; height: shell.pt(20); color: shell.theme.divider; anchors.verticalCenter: parent.verticalCenter }
@@ -1176,9 +1169,9 @@ FocusScope {
                     visible: cell.starred; x: cell.size-shell.px(20); y: -shell.px(6); width: shell.px(26); height: width; radius: width/2
                     color: shell.theme.focus; border.width: shell.px(3); border.color: shell.theme.gap
                 }
+                // The pointer: a click focuses and opens; pointing alone does nothing.
                 MouseArea {
-                    anchors.fill: parent; hoverEnabled: true
-                    onEntered: shell.selected=cell.navIndex
+                    anchors.fill: parent
                     onClicked: { shell.selected=cell.navIndex; shell.activate(shell.itemAt(cell.navIndex)); }
                 }
             }
@@ -1234,8 +1227,7 @@ FocusScope {
                     color: shell.warning; border.width: shell.px(3); border.color: shell.theme.gap
                 }
                 MouseArea {
-                    anchors.fill: parent; hoverEnabled: true
-                    onEntered: shell.selected=glyphCell.navIndex
+                    anchors.fill: parent
                     onClicked: { shell.selected=glyphCell.navIndex; shell.activate(shell.itemAt(glyphCell.navIndex)); }
                 }
             }
@@ -1270,16 +1262,16 @@ FocusScope {
                         font.family: shell.fontName; font.bold: true; font.pixelSize: pillDevice.visible ? shell.pt(19) : shell.pt(21); font.letterSpacing: -0.2*shell.u
                         color: pill.chosen ? shell.theme.onFocus : pill.dim ? shell.theme.dim : shell.theme.label
                     }
+                    TextMetrics { id: deviceMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(13); text: pill.entry && pill.entry.detail ? pill.entry.detail : "" }
                     Text {
                         id: pillDevice; visible: !!(pill.entry && pill.entry.detail); anchors.horizontalCenter: parent.horizontalCenter
-                        text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; width: Math.min(implicitWidth, shell.pillTextCap); elide: Text.ElideRight
+                        text: pill.entry && pill.entry.detail ? pill.entry.detail : ""; width: Math.min(Math.ceil(deviceMetrics.advanceWidth) + 1, shell.pillTextCap); elide: Text.ElideRight
                         font.family: shell.fontName; font.pixelSize: shell.pt(13)
                         color: pill.chosen ? shell.theme.onFocus2 : pill.dim ? shell.theme.dim2 : shell.ink3
                     }
                 }
                 MouseArea {
-                    anchors.fill: parent; hoverEnabled: true
-                    onEntered: shell.selected=pill.navIndex
+                    anchors.fill: parent
                     onClicked: { shell.selected=pill.navIndex; shell.activate(shell.itemAt(pill.navIndex)); }
                 }
             }
@@ -1349,13 +1341,6 @@ FocusScope {
             readonly property int firstRow: Math.round(contentY/step)
             contentWidth: width; contentHeight: Math.max(height, Math.ceil(apps.length/shell.appColumns)*step+shell.px(48)-shell.gap)
             Behavior on contentY { NumberAnimation { duration: shell.dur(180); easing.type: Easing.OutCubic } }
-            // The pointer's wheel moves the focus a row, as the arrows do; under
-            // the tiles, so their own hover and click stay theirs.
-            MouseArea {
-                anchors.fill: parent
-                onWheel: { if (wheel.angleDelta.y !== 0) shell.navigate(wheel.angleDelta.y < 0 ? Qt.Key_Down : Qt.Key_Up); }
-                onPressed: mouse.accepted = false
-            }
             Repeater {
                 model: apps
                 Loader {
@@ -1433,7 +1418,8 @@ FocusScope {
             readonly property int pad: shell.px(40)
             readonly property int rowHeight: shell.pt(56)
             readonly property int headerHeight: shell.pt(44)
-            readonly property int listTop: shell.px(100)
+            // Under the title, whatever the text size.
+            readonly property int listTop: shell.px(30) + Math.round(shell.pt(34)*1.3) + shell.px(26)
             readonly property int listWidth: shell.px(720)
 
             Text {
@@ -1441,7 +1427,7 @@ FocusScope {
                 text: shell.t("launcher_settings"); font.family: shell.fontName; font.bold: true; font.pixelSize: shell.pt(34); font.letterSpacing: -0.8*shell.u; color: shell.ink
             }
             Text {
-                anchors.right: parent.right; anchors.rightMargin: menu.pad; y: shell.px(30) + shell.pt(34) - shell.pt(14) - shell.px(4)
+                anchors.right: parent.right; anchors.rightMargin: menu.pad; y: shell.px(30) + Math.round(shell.pt(34)*1.3) - shell.pt(14) - shell.px(6)
                 text: "Homebar " + Config.version + (Config.webos ? " · webOS " + Config.webos : "") + (Config.platform ? " · " + Config.platform : "")
                 font.family: shell.fontName; font.pixelSize: shell.pt(14); color: shell.ink3
             }
@@ -1496,26 +1482,29 @@ FocusScope {
                                 color: chosen ? (shell.pane === 0 ? shell.theme.focus : shell.theme.tile) : "transparent"
                                 border.width: chosen && shell.pane === 1 ? 1 : 0; border.color: shell.theme.focus
                                 Behavior on color { ColorAnimation { duration: shell.dur(120) } }
+                                // Both texts are measured apart (TextMetrics) and cut to what
+                                // the row has: the value to half of it, the name to the rest.
+                                TextMetrics { id: nameMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(22); text: setting ? setting.title : "" }
+                                TextMetrics { id: valueMetrics; font.family: shell.fontName; font.pixelSize: shell.pt(19); text: setting ? setting.value : "" }
+                                Text {
+                                    id: rowValue
+                                    anchors.right: parent.right; anchors.rightMargin: shell.px(20); anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(Math.ceil(valueMetrics.advanceWidth) + 1, parent.width*0.5); elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
+                                    text: setting ? setting.value : ""; font.family: shell.fontName; font.pixelSize: shell.pt(19)
+                                    color: chosen && shell.pane === 0 ? shell.theme.onFocus2 : shell.ink3
+                                }
                                 Text {
                                     id: rowName
                                     x: shell.px(20); anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.min(implicitWidth, parent.width - rowValue.width - shell.px(60))
+                                    width: Math.min(Math.ceil(nameMetrics.advanceWidth) + 1, parent.width - rowValue.width - shell.px(60))
                                     elide: Text.ElideRight
                                     text: setting ? setting.title : ""; font.family: shell.fontName; font.pixelSize: shell.pt(22)
                                     color: chosen && shell.pane === 0 ? shell.theme.onFocus : shell.ink
                                 }
-                                Text {
-                                    id: rowValue
-                                    anchors.right: parent.right; anchors.rightMargin: shell.px(20); anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.min(implicitWidth, parent.width*0.5); elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
-                                    text: setting ? setting.value : ""; font.family: shell.fontName; font.pixelSize: shell.pt(19)
-                                    color: chosen && shell.pane === 0 ? shell.theme.onFocus2 : shell.ink3
-                                }
-                                // The pointer picks a row when it moves over one, not when a
-                                // row appears under a pointer left where it was.
+                                // The pointer: a click focuses the row and opens its values
+                                // (or does what an action does); pointing alone does nothing.
                                 MouseArea {
-                                    anchors.fill: parent; hoverEnabled: true
-                                    onPositionChanged: { if (shell.pointerMoved(parent, mouse) && (shell.pane !== 0 || shell.selected !== modelData.index)) { shell.pane = 0; shell.selected = modelData.index; } }
+                                    anchors.fill: parent
                                     onClicked: { shell.pane = 0; shell.selected = modelData.index; shell.activate(shell.itemAt(modelData.index)); }
                                 }
                             }
@@ -1601,8 +1590,7 @@ FocusScope {
                                     color: lit ? shell.theme.onFocus : shell.ink
                                 }
                                 MouseArea {
-                                    anchors.fill: parent; hoverEnabled: true
-                                    onPositionChanged: { if (shell.pointerMoved(parent, mouse) && (shell.pane !== 1 || shell.valueIndex !== index)) { shell.pane = 1; shell.valueIndex = index; shell.applyValue(); } }
+                                    anchors.fill: parent
                                     onClicked: { shell.pane = 1; shell.valueIndex = index; shell.applyValue(); }
                                 }
                             }
