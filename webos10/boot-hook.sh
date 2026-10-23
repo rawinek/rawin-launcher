@@ -15,6 +15,7 @@
 # /var/log/messages).
 LOG=/tmp/rawin-launcher-boot.log
 log() { logger -t rawin-launcher "$1"; echo "$(cut -d' ' -f1 /proc/uptime)s $1" >>"$LOG"; }
+launch() { luna-send -n 1 luna://com.webos.applicationManager/launch "$1" 2>/dev/null | grep -q '"returnValue": *true'; }
 log 'boot hook started'
 (
   /bin/sh /var/lib/webosbrew/rawin-launcher-home/takeover.sh apply
@@ -24,8 +25,13 @@ log 'boot hook started'
   while [ $n -lt 40 ]; do
     if luna-send -n 1 luna://org.rawin.launcher.service/ping '{}' 2>/dev/null | grep -q '"http"'; then
       log 'helper started'
-      if luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"org.rawin.launcher","params":{"preload":true}}' 2>/dev/null | grep -q '"returnValue": *true'; then
+      # Without the app manager's loading spinner and splash, where the
+      # launch call takes those flags; else the plain launch (the app then
+      # maps its window for a moment, which takes the spinner down).
+      if launch '{"id":"org.rawin.launcher","params":{"preload":true},"noSplash":true,"spinner":false}'; then
         log 'panel preloaded'
+      elif launch '{"id":"org.rawin.launcher","params":{"preload":true}}'; then
+        log 'panel preloaded (plain launch)'
       else
         log 'panel not preloaded (the launch failed); the first HOME starts it'
       fi

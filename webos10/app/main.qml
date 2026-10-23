@@ -4,8 +4,9 @@
 // app; qml-runner resets the "params" context property, which shows the
 // panel, or hides it when it is already up. BACK hides the window but keeps
 // the process, so the next HOME is a show, not a start. The boot hook
-// launches the app with {"preload": true}: then the window starts hidden,
-// and the first HOME after a boot is a show too.
+// launches the app with {"preload": true}: then the window is shown for a
+// moment with nothing drawn (so the app manager takes its loading spinner
+// down) and hidden, and the first HOME after a boot is a show too.
 import QtQuick 2.4
 import QtQuick.Window 2.2
 import Eos.Window 0.1
@@ -27,8 +28,15 @@ WebOSWindow {
     // a panel that is up.
     property bool preloaded: isPreload(launchParams)
     function isPreload(p) { return p !== null && p !== undefined && p.preload === true; }
-    Component.onCompleted: preloaded = isPreload(launchParams)   // ends the binding
     visible: !preloaded
+    // The app manager keeps its loading spinner on screen until a launched
+    // app shows a window: a preloaded start maps the window for a moment,
+    // with the panel faded out (nothing is drawn), and hides it again.
+    Component.onCompleted: {
+        preloaded = isPreload(launchParams);   // ends the binding
+        if (preloaded) { win.visible = true; mapTimer.start(); }
+    }
+    Timer { id: mapTimer; interval: 500; onTriggered: if (!home.foreground) win.visible = false }
     color: "transparent"
     appId: "org.rawin.launcher"
     title: "Homebar"
@@ -41,7 +49,7 @@ WebOSWindow {
     }
 
     function show() {
-        hideTimer.stop();
+        hideTimer.stop(); mapTimer.stop();
         win.visible = true;
         home.foreground = true;
         home.forceActiveFocus();

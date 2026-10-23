@@ -35,10 +35,13 @@ app:
   `qml-runner`. The *Input Hook* homebrew app sends the HOME button to it:
   HOME shows the panel, or hides it when it is already up. BACK hides the
   window but keeps the process, so the next HOME only has to show it. The
-  boot hook starts the app hidden once the helper is up (a launch with
-  `{"preload": true}`), so the first HOME after a boot is a show too, not a
-  start of `qml-runner`. A preload that lands after a HOME has already
-  started the app changes nothing. The hooks run some 40 s into a boot, and
+  boot hook starts the app once the helper is up (a launch with
+  `{"preload": true}`, without the app manager's spinner and splash where
+  the launch call takes those flags): the window is shown for half a second
+  with nothing drawn, which takes the app manager's loading spinner down,
+  and hidden; the first HOME after a boot is then a show too, not a start of
+  `qml-runner`. A preload that lands after a HOME has already started the
+  app changes nothing. The hooks run some 40 s into a boot, and
   Input Hook's own hook starts after the launcher's: a HOME before then
   opens LG's Home once (see
   [Troubleshooting](troubleshooting.md#home-right-after-a-boot-opens-lgs-home-overlay)).
